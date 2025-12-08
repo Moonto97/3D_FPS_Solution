@@ -6,6 +6,7 @@ public class Test : MonoBehaviour
     void Start()
     {
         // 테스트 테스트
+        // 코드리뷰 작동테스트
     }
 
     // Update is called once per frame
