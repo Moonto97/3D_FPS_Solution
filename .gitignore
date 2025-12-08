@@ -27,3 +27,4 @@ UserSettings/
 *.swp
 .DS_Store
 Thumbs.db
+.idea/**
