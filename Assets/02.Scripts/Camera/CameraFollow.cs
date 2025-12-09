@@ -3,10 +3,11 @@ using UnityEngine;
 // 목표를 따라다니는 카메라
 public class CameraFollow : MonoBehaviour
 {
-    public Transform target;
+    public Transform Target;
 
-    private void Update()
+    private void LateUpdate()
     {
-        transform.position = target.position;
+        transform.position = Target.position;
     }
+    
 }
