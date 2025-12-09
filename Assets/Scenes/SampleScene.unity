@@ -686,7 +686,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 986d53b5eeba8e740a2be1121ce1f384, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Target: {fileID: 0}
+  Target: {fileID: 1423029332}
 --- !u!1 &372957484
 GameObject:
   m_ObjectHideFlags: 0
@@ -1212,7 +1212,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 0}
   m_FillRect: {fileID: 372957485}
   m_HandleRect: {fileID: 0}
@@ -1350,7 +1350,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 0}
   m_FillRect: {fileID: 1643690615}
   m_HandleRect: {fileID: 0}
@@ -1450,7 +1450,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1487,6 +1487,7 @@ GameObject:
   - component: {fileID: 1010607440}
   - component: {fileID: 1010607439}
   - component: {fileID: 1010607438}
+  - component: {fileID: 1010607442}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1577,6 +1578,21 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1010607442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010607437}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 741edbbf3a5d2174f8454f4a7758874f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stats: {fileID: 1423029337}
+  _healthSlider: {fileID: 661140289}
+  _staminaSlider: {fileID: 850773512}
 --- !u!1 &1271949869
 GameObject:
   m_ObjectHideFlags: 0
@@ -1737,7 +1753,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1880,9 +1896,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _config:
-    Gravity: 0
-    RunStamina: 0
-    JumpStamina: 0
+    Gravity: -9.8
+    RunStamina: 10
+    JumpStamina: 10
 --- !u!143 &1423029335
 CharacterController:
   m_ObjectHideFlags: 0
@@ -1936,13 +1952,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Health:
-    _maxValue: 0
-    _value: 0
-    _regenValue: 0
+    _maxValue: 100
+    _value: 100
+    _regenValue: 10
   Stamina:
-    _maxValue: 0
-    _value: 0
-    _regenValue: 0
+    _maxValue: 100
+    _value: 100
+    _regenValue: 20
   Damage:
     _value: 10
   MoveSpeed:
@@ -1950,7 +1966,7 @@ MonoBehaviour:
   RunSpeed:
     _value: 14
   JumpPower:
-    _value: 0
+    _value: 5
 --- !u!1 &1484695625
 GameObject:
   m_ObjectHideFlags: 0
@@ -2403,12 +2419,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 0
-    m_Right: 0
+    m_Left: 12
+    m_Right: 12
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 0
-  m_Spacing: 0
+  m_ChildAlignment: 3
+  m_Spacing: -10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 1
@@ -2429,7 +2445,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.5529412}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
