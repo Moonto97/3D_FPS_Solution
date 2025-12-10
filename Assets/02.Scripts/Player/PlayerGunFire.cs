@@ -22,16 +22,12 @@ public class PlayerGunFire : MonoBehaviour
                 Debug.Log(hitInfo.transform.name);
                 // 파티클 생성과 플레이 방식
                 // 1. Instantiate 방식 (+풀링) -> 새로 생성 (메모리, cpu 사용 많음) -> 한 화면에 여러가지 수정 후 여러개 그릴 경우 쓴다.
-                // 2. 하나를 캐싱해두고 Play -> 재실행이므로 기존 파티클 삭제.. -> 한 화면에 한번만 그릴 경우 쓴다
-                // 3. 하나를 캐싱해두고 Emit -> 한 화면에 위치만 수정 후 여러개 그릴 경우 쓴다
-                
-                
-                //_hitEffect.transform.position = hitInfo.point;
-                //_hitEffect.transform.forward = hitInfo.normal;
-                ParticleSystem.EmitParams emitParams = new ParticleSystem.EmitParams();
-                emitParams.position = hitInfo.point;
-                emitParams.rotation3D = Quaternion.LookRotation(hitInfo.normal).eulerAngles;
-                _hitEffect.Emit(emitParams, 1);
+                // 2. 하나를 캐싱해두고 Play -> 인스펙터 설정 그대로 그릴 경우 쓴다
+                // 3. 하나를 캐싱해두고 Emit -> 인스펙터 설정을 수정 후 그릴 경우 쓴다
+
+                _hitEffect.transform.position = hitInfo.point;
+                _hitEffect.transform.forward = hitInfo.normal;
+                _hitEffect.Play();
             }
         }
         // Ray : 레이저 (시작 위치, 방향, 거리)
