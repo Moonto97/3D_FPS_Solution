@@ -31,7 +31,7 @@ public class CoroutineExample1 : MonoBehaviour
         for (int i = 0; i < 100; i++)
         {
             // yield 키워드를 이용하면 코루틴함수의 실행을 중단하고 이어할 수 있다.
-            yield return null; // return null -> 다음 프레임까지 쉰다.
+            yield return null; // return null -> 다음 프레임까지 쉰다.  
             //yield return new WaitForSeconds(3f);    // 3초 쉰다
             //yield break; // 코루틴을 끝낸다
             for (int j = 0; j < 1000000; j++)
