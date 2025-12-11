@@ -21,7 +21,7 @@ public class CoroutineExample3 : MonoBehaviour
     private IEnumerator Ready_Coroutine(float second)
     {
         yield return new WaitForSeconds(second);
-        Debug.Log($"{second}초 대기");
+        Debug.Log($"{second}초 대기함");
         
         // 2. 코루틴 내부에서도 코루틴을 호출할 수 있다. (중첩 코루틴은 사용 X)
         // StartCoroutine(Start_Coroutine(second));
@@ -29,7 +29,7 @@ public class CoroutineExample3 : MonoBehaviour
 
     private IEnumerator Start_Coroutine(float second)
     {
-        Debug.Log($"{second}초 대기");
+        Debug.Log($"{second}초 대기시작");
         yield return new WaitForSeconds(second);
 
         Debug.Log("시작!");
@@ -44,5 +44,4 @@ public class CoroutineExample3 : MonoBehaviour
 
         Debug.Log("종료");
     }
-    
 }
