@@ -110,7 +110,7 @@ public class Monster : MonoBehaviour
             Debug.Log($"상태 전환: {State} -> Comeback");
         }
     }
-
+    
     private void Comeback()
     {
         // 만약 플레이어가 다시 감지범위에 들어온다면 Trace
@@ -124,7 +124,7 @@ public class Monster : MonoBehaviour
         Vector3 direction = (_defaultPosition - transform.position).normalized;
         _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
     }
-
+    
     private void Attack()
     {
         // 플레이어를 공격하는 상태
@@ -186,14 +186,21 @@ public class Monster : MonoBehaviour
         // 밀려나는 속도는 점점 줄어들고 -> 줄어드는 양
         // 밀려나는 거리도 있고 -> 밀리는 거리
         // 밀려나는 방향도 있고 -> 방향벡터
-        // 
+        //
         // KnockbackVelocity >> 얼마나, 어디로 밀리게 할지 힘
         // KnockbackDecay >> 힘이 얼마나 빨리 사라지게 할지 -> 점점 사라지게 Lerp 이용
-        
+
+        // 넉백 속도가 충분히 작으면 적용하지 않음
+        if (_knockbackVelocity.sqrMagnitude < 0.01f)
+        {
+            _knockbackVelocity = Vector3.zero;
+            return;
+        }
+
         _controller.Move(_knockbackVelocity * Time.deltaTime);
         _knockbackVelocity = Vector3.Lerp(
-            _knockbackVelocity, 
-            Vector3.zero, 
+            _knockbackVelocity,
+            Vector3.zero,
             _monsterStats.KnockbackDecay.Value * Time.deltaTime
         );
         Debug.Log("넉백!");
