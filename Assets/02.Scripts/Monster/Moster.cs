@@ -112,13 +112,13 @@ public class Monster : MonoBehaviour
     private void Comeback()
     {
         // 만약 플레이어가 다시 감지범위에 들어온다면 Trace
+        float distance = Vector3.Distance(transform.position, _player.transform.position);
         if (distance <= _monsterStats.DetectDistance.Value)
         {
             State = EMonsterState.Trace;
             Debug.Log($"상태 전환: {State} -> Trace");
         }
         // 현재 몬스터 포지션에서 defaultPosition 으로의 방향으로 이동
-        float distance = Vector3.Distance(transform.position, _player.transform.position);
         Vector3 direction = (_defaultPosition - transform.position).normalized;
         _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
     }
