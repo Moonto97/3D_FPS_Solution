@@ -34,16 +34,17 @@ public class Monster : MonoBehaviour
     public EMonsterState State = EMonsterState.Idle;
 
     [SerializeField] private GameObject _player;
+    [SerializeField] private PlayerStats _playerStats;
     [SerializeField] private CharacterController _controller;
-    // 스텟 스크립트 따로 만들어서 관리하기
-    public float DetectDistance = 4f;
-    public float AttackDistance = 1.2f;
-    
-    public float MoveSpeed   = 5f;
-    public float AttackSpeed = 2f;
-    public float AttackTimer = 0f;
-    
+    [SerializeField] private  MonsterStats _monsterStats;
+    private float _attackTimer = 0f;
+    private Vector3 _defaultPosition;
 
+    private void Start()
+    {
+        _defaultPosition = transform.position;
+    }
+    
     private void Update()
     {
         // 몬스터의 상태에 따라 다른 행동을한다. (다른 메서드를 호출한다.)
@@ -75,10 +76,10 @@ public class Monster : MonoBehaviour
         // Todo. Idle 애니메이션 실행
             
         // 플레이어가 탐지범위 안에 있다면...
-        if(Vector3.Distance(transform.position, _player.transform.position) <= DetectDistance)
+        if(Vector3.Distance(transform.position, _player.transform.position) <= _monsterStats.DetectDistance.Value)
         {
             State = EMonsterState.Trace;
-            Debug.Log("상태 전환: Idle -> Trace");
+            Debug.Log($"상태 전환: {State} -> Trace");
         }
     }
 
@@ -87,26 +88,39 @@ public class Monster : MonoBehaviour
         // 플레이어를 쫓아가는 상태
         // Todo. Run 애니메이션 실행
         
-        // Comback 과제
-        
         float distance = Vector3.Distance(transform.position, _player.transform.position);
         
         // 1. 플레이어를 향하는 방향을 구한다.
         Vector3 direction = (_player.transform.position - transform.position).normalized;
         // 2. 방향에 따라 이동한다.
-        _controller.Move(direction * MoveSpeed * Time.deltaTime);
+        _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
 
         // 플레이어와의 거리가 공격범위내라면
-        if (distance <= AttackDistance)
+        if (distance <= _monsterStats.AttackDistance.Value)
         {
             State = EMonsterState.Attack;
-            Debug.Log("상태 전환: Trace -> Attack");
+            Debug.Log($"상태 전환: {State} -> Attack");
+        }
+        // 플레이어와의 거리가 감지범위 밖이라면
+        if (distance >= _monsterStats.DetectDistance.Value)
+        {
+            State = EMonsterState.Comeback;
+            Debug.Log($"상태 전환: {State} -> Comeback");
         }
     }
 
     private void Comeback()
     {
-        // 과제 1. 제자리로 복귀하는 상태
+        // 만약 플레이어가 다시 감지범위에 들어온다면 Trace
+        if (distance <= _monsterStats.DetectDistance.Value)
+        {
+            State = EMonsterState.Trace;
+            Debug.Log($"상태 전환: {State} -> Trace");
+        }
+        // 현재 몬스터 포지션에서 defaultPosition 으로의 방향으로 이동
+        float distance = Vector3.Distance(transform.position, _player.transform.position);
+        Vector3 direction = (_defaultPosition - transform.position).normalized;
+        _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
     }
 
     private void Attack()
@@ -115,25 +129,25 @@ public class Monster : MonoBehaviour
         
         // 플레이어와의 거리가 멀다면 다시 쫒아오는 상태로 전환
         float distance = Vector3.Distance(transform.position, _player.transform.position);
-        if (distance > AttackDistance)
+        if (distance > _monsterStats.AttackDistance.Value)
         {
             State = EMonsterState.Trace;
-            Debug.Log("상태 전환: Attack -> Trace");
+            Debug.Log($"상태 전환: {State} -> Trace");
             return;
         }
 
-        AttackTimer += Time.deltaTime;
-        if (AttackTimer >= AttackSpeed)
+        _attackTimer += Time.deltaTime;
+        if (_attackTimer >= _monsterStats.AttackSpeed.Value)
         {
-            AttackTimer = 0f;
+            _attackTimer = 0f;
+            
             Debug.Log("플레이어 공격!");
             
-            // 과제 2번. 플레이어 공격하기
+            _playerStats.TakeDamage(_monsterStats.Damage.Value);
         }
     }
 
-
-    public float Health = 100;
+    
     public bool TryTakeDamage(float damage)
     {
         if (State == EMonsterState.Hit || State == EMonsterState.Death)
@@ -141,9 +155,9 @@ public class Monster : MonoBehaviour
             return false;
         }
         
-        Health -= damage;
+        _monsterStats.Health.Decrease(damage);
 
-        if (Health > 0)
+        if (_monsterStats.Health.Value > 0)
         {
             // 히트상태
             Debug.Log($"상태 전환: {State} -> Hit");

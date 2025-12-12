@@ -1328,6 +1328,7 @@ GameObject:
   - component: {fileID: 827444275}
   - component: {fileID: 827444274}
   - component: {fileID: 827444278}
+  - component: {fileID: 827444279}
   m_Layer: 0
   m_Name: Moster
   m_TagString: Untagged
@@ -1442,13 +1443,35 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   State: 0
   _player: {fileID: 1423029328}
+  _playerStats: {fileID: 1423029337}
   _controller: {fileID: 827444274}
-  DetectDistance: 4
-  AttackDistance: 1.2
-  MoveSpeed: 5
-  AttackSpeed: 2
-  AttackTimer: 0
-  Health: 100
+  _monsterStats: {fileID: 827444279}
+--- !u!114 &827444279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 827444273}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a33597d0202a844d8758f4906be548a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Health:
+    _maxValue: 100
+    _value: 100
+    _regenValue: 0
+  MoveSpeed:
+    _value: 5
+  AttackSpeed:
+    _value: 2
+  DetectDistance:
+    _value: 4
+  AttackDistance:
+    _value: 1.2
+  Damage:
+    _value: 10
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1923,7 +1946,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 10, y: 10, z: 10}
+  m_LocalScale: {x: 10000, y: 10, z: 10000}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 987166129}
