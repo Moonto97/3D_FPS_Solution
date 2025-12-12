@@ -29,4 +29,10 @@ public class PlayerStats : MonoBehaviour
         Health.Regenerate(deltaTime);
         Stamina.Regenerate(deltaTime);
     } 
+    public void TakeDamage(float damage)
+    {
+        Health.Decrease(damage);
+        Debug.Log($"플레이어 피격! 남은 체력: {Health.Value}");
+    }
+    
 }
