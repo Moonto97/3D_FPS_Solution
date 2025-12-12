@@ -1472,6 +1472,10 @@ MonoBehaviour:
     _value: 1.2
   Damage:
     _value: 10
+  KnockbackDecay:
+    _value: 3
+  KnockbackForce:
+    _value: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

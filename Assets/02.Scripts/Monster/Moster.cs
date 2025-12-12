@@ -39,6 +39,7 @@ public class Monster : MonoBehaviour
     [SerializeField] private  MonsterStats _monsterStats;
     private float _attackTimer = 0f;
     private Vector3 _defaultPosition;
+    private Vector3 _knockbackVelocity;  // 넉백 시 밀려날 방향과 힘
 
     private void Start()
     {
@@ -47,6 +48,7 @@ public class Monster : MonoBehaviour
     
     private void Update()
     {
+        ApplyKnockBack();
         // 몬스터의 상태에 따라 다른 행동을한다. (다른 메서드를 호출한다.)
         switch (State)
         {
@@ -156,7 +158,8 @@ public class Monster : MonoBehaviour
         }
         
         _monsterStats.Health.Decrease(damage);
-
+        _knockbackVelocity = transform.position -  _player.transform.position;
+        ApplyKnockBack();
         if (_monsterStats.Health.Value > 0)
         {
             // 히트상태
@@ -174,6 +177,26 @@ public class Monster : MonoBehaviour
         }
 
         return true;
+    }
+
+    private void ApplyKnockBack()
+    {
+        // 상태 변화는 필요없을듯 하고,
+        // 플레이어 반대 방향으로 살짝 밀려난 뒤 현재 상태에 맞는 행동을 하면 될듯
+        // 밀려나는 속도는 점점 줄어들고 -> 줄어드는 양
+        // 밀려나는 거리도 있고 -> 밀리는 거리
+        // 밀려나는 방향도 있고 -> 방향벡터
+        // 
+        // KnockbackVelocity >> 얼마나, 어디로 밀리게 할지 힘
+        // KnockbackDecay >> 힘이 얼마나 빨리 사라지게 할지 -> 점점 사라지게 Lerp 이용
+        
+        _controller.Move(_knockbackVelocity * Time.deltaTime);
+        _knockbackVelocity = Vector3.Lerp(
+            _knockbackVelocity, 
+            Vector3.zero, 
+            _monsterStats.KnockbackDecay.Value * Time.deltaTime
+        );
+        Debug.Log("넉백!");
     }
     
     private IEnumerator Hit_Coroutine()
