@@ -158,8 +158,7 @@ public class Monster : MonoBehaviour
         }
         
         _monsterStats.Health.Decrease(damage);
-        _knockbackVelocity = transform.position -  _player.transform.position;
-        ApplyKnockBack();
+        _knockbackVelocity = (transform.position -  _player.transform.position).normalized * _monsterStats.KnockbackForce.Value;
         if (_monsterStats.Health.Value > 0)
         {
             // 히트상태
@@ -203,13 +202,11 @@ public class Monster : MonoBehaviour
             Vector3.zero,
             _monsterStats.KnockbackDecay.Value * Time.deltaTime
         );
-        Debug.Log("넉백!");
     }
     
     private IEnumerator Hit_Coroutine()
     {
         // Todo. Hit 애니메이션 실행
-        
         yield return new WaitForSeconds(0.2f);
         State = EMonsterState.Idle;
     }

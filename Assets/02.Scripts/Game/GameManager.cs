@@ -1,7 +1,6 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -12,6 +11,9 @@ public class GameManager : MonoBehaviour
     public EGameState State => _state;
 
     [SerializeField] private TextMeshProUGUI _stateTextUI;
+
+    private float _showReadyUI = 2f;
+    private float _showStartUI = 0.5f;
 
     private void Awake()
     {
@@ -30,11 +32,11 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator StartToPlay_Coroutine()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(_showReadyUI);
 
         _stateTextUI.text = "시작!";
         
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(_showStartUI);
 
         _state = EGameState.Playing;
         
