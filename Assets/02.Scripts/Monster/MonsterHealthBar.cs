@@ -8,8 +8,9 @@ public class MonsterHealthBar : MonoBehaviour
     [SerializeField] private Transform _healthBarTransform;
     [SerializeField] private Image _guageImage;
 
-    private float _lastHealth = -1;
-private void Awake()
+    private Transform _cameraTransform;
+
+    private void Awake()
     {
         // null 체크
         if (_monsterStats == null)
@@ -27,31 +28,45 @@ private void Awake()
             Debug.LogError("MonsterHealthBar: _healthBarTransform이 할당되지 않았습니다!");
             return;
         }
-        
+
+        // 카메라 캐싱
+        if (Camera.main != null)
+        {
+            _cameraTransform = Camera.main.transform;
+        }
+
+        // 이벤트 구독
+        _monsterStats.Health.OnValueChanged += OnHealthChanged;
+
         // 초기 fillAmount 설정
         _guageImage.fillAmount = _monsterStats.Health.Value / _monsterStats.Health.MaxValue;
-        _lastHealth = _monsterStats.Health.Value;
-        
+
         Debug.Log($"MonsterHealthBar 초기화 완료 - Health: {_monsterStats.Health.Value}/{_monsterStats.Health.MaxValue}");
     }
 
-private void LateUpdate()
+    private void OnDestroy()
     {
-        if (_monsterStats == null || _guageImage == null || _healthBarTransform == null)
-            return;
-            
-        // UI가 알고있는 몬스터 체력값과 다를 경우에만 fillAmount를 수정한다.
-        if (_lastHealth != _monsterStats.Health.Value)
+        // 이벤트 구독 해제
+        if (_monsterStats != null)
         {
-            _lastHealth = _monsterStats.Health.Value;
-            float fillValue = _monsterStats.Health.Value / _monsterStats.Health.MaxValue;
-            _guageImage.fillAmount = fillValue;
+            _monsterStats.Health.OnValueChanged -= OnHealthChanged;
         }
-        
-        // 빌보드 기법: 카메라의 위치와 회전에 상관없이 항상 정면을 바라보게하는 기법
-        if (Camera.main != null)
+    }
+
+    private void OnHealthChanged(float currentValue, float maxValue)
+    {
+        if (_guageImage != null)
         {
-            _healthBarTransform.forward = Camera.main.transform.forward;
+            _guageImage.fillAmount = currentValue / maxValue;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        // 빌보드 기법: 카메라의 위치와 회전에 상관없이 항상 정면을 바라보게하는 기법
+        if (_cameraTransform != null && _healthBarTransform != null)
+        {
+            _healthBarTransform.forward = _cameraTransform.forward;
         }
     }
 }

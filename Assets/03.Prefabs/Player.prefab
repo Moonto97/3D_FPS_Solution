@@ -263,7 +263,7 @@ MonoBehaviour:
   Health:
     _maxValue: 100
     _value: 100
-    _regenValue: 10
+    _regenValue: 1
   Stamina:
     _maxValue: 100
     _value: 100
@@ -289,4 +289,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _fireTransform: {fileID: 7478798440540720108}
-  _hitEffect: {fileID: 19800002, guid: 54dd9cb5740188a488b8baebbf19207c, type: 3}
+  _damage: 10
+  _hitEffectPrefab: {fileID: 7187393024123294025, guid: 5f2bc166e68df974bb952c4ec5c43454, type: 3}
+  _hitEffectPoolTag: HitEffect
+  _poolInitialSize: 10
+  _effectDuration: 2
