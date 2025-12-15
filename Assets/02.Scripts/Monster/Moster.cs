@@ -39,6 +39,7 @@ public class Monster : MonoBehaviour
     [SerializeField] private  MonsterStats _monsterStats;
     private float _attackTimer = 0f;
     private Vector3 _defaultPosition;
+    private Vector3 _knockbackVelocity;  // 넉백 시 밀려날 방향과 힘
 
     private void Start()
     {
@@ -47,6 +48,7 @@ public class Monster : MonoBehaviour
     
     private void Update()
     {
+        ApplyKnockBack();
         // 몬스터의 상태에 따라 다른 행동을한다. (다른 메서드를 호출한다.)
         switch (State)
         {
@@ -108,7 +110,7 @@ public class Monster : MonoBehaviour
             Debug.Log($"상태 전환: {State} -> Comeback");
         }
     }
-
+    
     private void Comeback()
     {
         // 만약 플레이어가 다시 감지범위에 들어온다면 Trace
@@ -122,7 +124,7 @@ public class Monster : MonoBehaviour
         Vector3 direction = (_defaultPosition - transform.position).normalized;
         _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
     }
-
+    
     private void Attack()
     {
         // 플레이어를 공격하는 상태
@@ -156,7 +158,7 @@ public class Monster : MonoBehaviour
         }
         
         _monsterStats.Health.Decrease(damage);
-
+        _knockbackVelocity = (transform.position -  _player.transform.position).normalized * _monsterStats.KnockbackForce.Value;
         if (_monsterStats.Health.Value > 0)
         {
             // 히트상태
@@ -175,11 +177,36 @@ public class Monster : MonoBehaviour
 
         return true;
     }
+
+    private void ApplyKnockBack()
+    {
+        // 상태 변화는 필요없을듯 하고,
+        // 플레이어 반대 방향으로 살짝 밀려난 뒤 현재 상태에 맞는 행동을 하면 될듯
+        // 밀려나는 속도는 점점 줄어들고 -> 줄어드는 양
+        // 밀려나는 거리도 있고 -> 밀리는 거리
+        // 밀려나는 방향도 있고 -> 방향벡터
+        //
+        // KnockbackVelocity >> 얼마나, 어디로 밀리게 할지 힘
+        // KnockbackDecay >> 힘이 얼마나 빨리 사라지게 할지 -> 점점 사라지게 Lerp 이용
+
+        // 넉백 속도가 충분히 작으면 적용하지 않음
+        if (_knockbackVelocity.sqrMagnitude < 0.01f)
+        {
+            _knockbackVelocity = Vector3.zero;
+            return;
+        }
+
+        _controller.Move(_knockbackVelocity * Time.deltaTime);
+        _knockbackVelocity = Vector3.Lerp(
+            _knockbackVelocity,
+            Vector3.zero,
+            _monsterStats.KnockbackDecay.Value * Time.deltaTime
+        );
+    }
     
     private IEnumerator Hit_Coroutine()
     {
         // Todo. Hit 애니메이션 실행
-        
         yield return new WaitForSeconds(0.2f);
         State = EMonsterState.Idle;
     }

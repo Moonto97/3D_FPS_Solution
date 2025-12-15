@@ -10,4 +10,6 @@ public class MonsterStats : MonoBehaviour
     public ValueStat DetectDistance;
     public ValueStat AttackDistance;
     public ValueStat Damage;
+    public ValueStat KnockbackDecay;
+    public ValueStat KnockbackForce;
 }

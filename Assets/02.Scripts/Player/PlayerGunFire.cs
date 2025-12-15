@@ -23,17 +23,27 @@ public class PlayerGunFire : MonoBehaviour
             if (isHit)
             {
                 // 5.  충돌했다면... 피격 이펙트 표시
-                Debug.Log(hitInfo.transform.name);
-                
+
                 // 파티클 생성과 플레이 방식
                 // 1. Instantiate 방식 (+ 풀링) -> 한 화면에 여러가지 수정 후 여러개 그릴경우
                 // 2. 하나를 캐싱해두고 Play     -> 인스펙터 설정 그대로 그릴 경우
                 // 3. 하나를 캐싱해두고 Emit     -> 인스펙터 설정을 수정 후 그릴 경우
-                
-                _hitEffect.transform.position = hitInfo.point;
-                _hitEffect.transform.forward = hitInfo.normal;
 
-                _hitEffect.Play();
+                // Instantiate 방식 사용 (탄착 효과는 일회성이므로 적합)
+                ParticleSystem effect = Instantiate(_hitEffect, hitInfo.point, Quaternion.LookRotation(hitInfo.normal));
+                Destroy(effect.gameObject, 2f); // 2초 후 자동 삭제
+
+                // 원래 방식 (Play 방식) - Emission RateOverTime이 0일 경우 작동 안함
+                // if (_hitEffect == null)
+                // {
+                //     Debug.LogError("_hitEffect is null! Please assign it in the Inspector.");
+                // }
+                // else
+                // {
+                //     _hitEffect.transform.position = hitInfo.point;
+                //     _hitEffect.transform.forward = hitInfo.normal;
+                //     _hitEffect.Play();
+                // }
 
                 // 레이어, 컴포넌트, 태그 방식을 선택하는 기준 여기서는 컴포넌트를 쓴 이유
                 Monster monster = hitInfo.collider.gameObject.GetComponent<Monster>();
