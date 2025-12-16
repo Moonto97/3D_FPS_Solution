@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Monster : MonoBehaviour
 {
@@ -37,6 +38,8 @@ public class Monster : MonoBehaviour
     [SerializeField] private PlayerStats _playerStats;
     [SerializeField] private CharacterController _controller;
     [SerializeField] private  MonsterStats _monsterStats;
+    [SerializeField] private NavMeshAgent _agent;
+    
     private float _attackTimer = 0f;
     private Vector3 _defaultPosition;
     private Vector3 _knockbackVelocity;  // 넉백 시 밀려날 방향과 힘
@@ -44,6 +47,10 @@ public class Monster : MonoBehaviour
     private void Start()
     {
         _defaultPosition = transform.position;
+
+        _agent.speed = _monsterStats.MoveSpeed.Value;
+        
+        _agent.stoppingDistance = _monsterStats.AttackDistance.Value;
     }
     
     private void Update()
@@ -96,10 +103,13 @@ public class Monster : MonoBehaviour
         float distance = Vector3.Distance(transform.position, _player.transform.position);
         
         // 1. 플레이어를 향하는 방향을 구한다.
-        Vector3 direction = (_player.transform.position - transform.position).normalized;
+        // Vector3 direction = (_player.transform.position - transform.position).normalized;
         // 2. 방향에 따라 이동한다.
-        _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
-
+        // _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
+        
+        // 방향 설정 필요 없이 도착지만 설정해주면 네비게이션 시스템에 의해 자동으로 이동한다.
+        _agent.SetDestination(_player.transform.position);
+        
         // 플레이어와의 거리가 공격범위내라면
         if (distance <= _monsterStats.AttackDistance.Value)
         {
@@ -120,12 +130,13 @@ public class Monster : MonoBehaviour
         float distance = Vector3.Distance(transform.position, _player.transform.position);
         if (distance <= _monsterStats.DetectDistance.Value)
         {
-            State = EMonsterState.Trace;
             Debug.Log($"상태 전환: {State} -> Trace");
+            State = EMonsterState.Trace;
         }
         // 현재 몬스터 포지션에서 defaultPosition 으로의 방향으로 이동
-        Vector3 direction = (_defaultPosition - transform.position).normalized;
-        _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
+        // Vector3 direction = (_defaultPosition - transform.position).normalized;
+        // _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
+        _agent.SetDestination(_defaultPosition);
     }
     
     private void Attack()
@@ -161,6 +172,10 @@ public class Monster : MonoBehaviour
         }
         
         _monsterStats.Health.Decrease(damage);
+        
+        _agent.isStopped = true;    // 이동 일시정지
+        _agent.ResetPath();         // 경로 (목적지) 삭제 
+        
         _knockbackVelocity = (transform.position -  _player.transform.position).normalized * _monsterStats.KnockbackForce.Value;
         if (_monsterStats.Health.Value > 0)
         {
