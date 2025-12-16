@@ -28,10 +28,17 @@ public class PlayerMove : MonoBehaviour
         _stats = GetComponent<PlayerStats>();
     }
 
-    private void Update()
+private void Update()
     {
-        // 0. 중력을 누적한다.
+        // 중력은 게임 상태와 무관하게 항상 적용
         _yVelocity += _config.Gravity * Time.deltaTime;
+        
+        // Playing 상태가 아니면 중력만 적용하고 입력은 무시
+        if (GameManager.Instance.State != EGameState.Playing)
+        {
+            _controller.Move(new Vector3(0, _yVelocity, 0) * Time.deltaTime);
+            return;
+        }
         
         // 1. 키보드 입력 받기
         float x = Input.GetAxis("Horizontal");

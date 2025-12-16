@@ -28,11 +28,21 @@ public class PlayerStats : MonoBehaviour
         
         Health.Regenerate(deltaTime);
         Stamina.Regenerate(deltaTime);
+
+        if (Health.Value <= 0)
+        {
+            Death();
+        }
     } 
     public void TakeDamage(float damage)
     {
         Health.Decrease(damage);
         Debug.Log($"플레이어 피격! 남은 체력: {Health.Value}");
+    }
+
+    private void Death()
+    {
+        GameManager.Instance.GameOver();
     }
     
 }

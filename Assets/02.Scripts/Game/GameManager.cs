@@ -42,4 +42,12 @@ public class GameManager : MonoBehaviour
         
         _stateTextUI.gameObject.SetActive(false);
     }
+
+    public void GameOver()
+    {
+        _stateTextUI.gameObject.SetActive(true);
+
+        _state = EGameState.GameOver;
+        _stateTextUI.text = "게임 오버..";
+    }
 }

@@ -13,6 +13,8 @@ public class CameraRotate : MonoBehaviour
     
     private void Update()
     {
+        if (GameManager.Instance.State != EGameState.Playing) return;
+        
         
         // 게임 시작하면 y축이 0도에서 -> -1도
         

@@ -7,6 +7,8 @@ public class PlayerRotate : MonoBehaviour
 
     private void Update()
     {
+        if (GameManager.Instance.State != EGameState.Playing) return;
+        
         if (!Input.GetMouseButton(1))
         {
             return;
