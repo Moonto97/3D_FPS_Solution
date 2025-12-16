@@ -5,9 +5,9 @@ using UnityEngine.AI;
 public class Monster : MonoBehaviour
 {
     #region 설계 의도
-    // 리퍼식 점프 시스템 v6:
+    // 리퍼식 점프 시스템 v7:
     // 1. 플레이어가 공중에 있어도 플레이어 "지면" 방향으로 이동
-    // 2. 점프 가능 거리에 도달하면 점프
+    // 2. 플레이어 지면 "끝단"까지 거리로 점프 판단 (NavMesh.Raycast)
     // 3. 상승/하강 점프 모두 지원
     #endregion
 
@@ -167,13 +167,9 @@ public class Monster : MonoBehaviour
             return;
         }
 
-        // 플레이어 지면 위치 갱신
         UpdatePlayerGroundPosition();
-
-        // 이동 목표 설정
         SetTraceDestination();
 
-        // 점프 판단
         if (ShouldAttemptJump())
         {
             TryStartJump();
@@ -182,22 +178,16 @@ public class Monster : MonoBehaviour
         UpdateStuckDetection();
     }
 
-    /// <summary>
-    /// 플레이어가 서있는 지면 위치를 갱신한다.
-    /// 플레이어가 공중에 있어도 아래 지면을 추적.
-    /// </summary>
     private void UpdatePlayerGroundPosition()
     {
         Vector3 playerPos = _player.transform.position;
         
-        // 방법 1: NavMesh에서 직접 탐색 (가장 신뢰성 높음)
         if (NavMesh.SamplePosition(playerPos, out NavMeshHit navHit, 10f, NavMesh.AllAreas))
         {
             _lastKnownPlayerGroundPos = navHit.position;
             return;
         }
         
-        // 방법 2: 레이캐스트로 지면 찾기 (groundLayer 설정된 경우)
         if (_groundLayer.value != 0)
         {
             if (Physics.Raycast(playerPos + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 20f, _groundLayer))
@@ -210,7 +200,6 @@ public class Monster : MonoBehaviour
             }
         }
         
-        // 방법 3: 플레이어 x,z + 몬스터 높이에서 NavMesh 탐색
         Vector3 sameHeightPos = new Vector3(playerPos.x, transform.position.y, playerPos.z);
         if (NavMesh.SamplePosition(sameHeightPos, out NavMeshHit sameHeightHit, 5f, NavMesh.AllAreas))
         {
@@ -218,21 +207,16 @@ public class Monster : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 추적 목표 설정: 플레이어 방향으로 계속 이동
-    /// </summary>
     private void SetTraceDestination()
     {
         NavMeshPath path = new NavMeshPath();
         
-        // 1순위: 플레이어 직접 경로
         if (_agent.CalculatePath(_player.transform.position, path) && path.status == NavMeshPathStatus.PathComplete)
         {
             _agent.SetDestination(_player.transform.position);
             return;
         }
         
-        // 2순위: 플레이어 지면 경로
         if (_lastKnownPlayerGroundPos != Vector3.zero)
         {
             if (_agent.CalculatePath(_lastKnownPlayerGroundPos, path) && path.status == NavMeshPathStatus.PathComplete)
@@ -242,7 +226,6 @@ public class Monster : MonoBehaviour
             }
         }
         
-        // 3순위: 플레이어 방향으로 갈 수 있는 가장 먼 지점
         Vector3 dirToPlayer = _player.transform.position - transform.position;
         dirToPlayer.y = 0;
         
@@ -302,6 +285,47 @@ public class Monster : MonoBehaviour
 
     #region 점프 판단 로직
 
+    /// <summary>
+    /// 플레이어 지면의 끝단(몬스터 방향)을 찾는다.
+    /// NavMesh.Raycast로 경계 탐색.
+    /// </summary>
+    /// <returns>true: 끝단 찾음 (다른 NavMesh), false: 같은 NavMesh</returns>
+    private bool TryGetPlatformEdge(out Vector3 edgePos, out float distanceToEdge)
+    {
+        edgePos = Vector3.zero;
+        distanceToEdge = 0f;
+        
+        if (_lastKnownPlayerGroundPos == Vector3.zero) return false;
+        
+        // 플레이어 지면에서 몬스터 방향 계산
+        Vector3 playerGround = _lastKnownPlayerGroundPos;
+        Vector3 dirToMonster = transform.position - playerGround;
+        dirToMonster.y = 0;
+        
+        if (dirToMonster.sqrMagnitude < 0.01f) return false;
+        
+        dirToMonster.Normalize();
+        
+        // NavMesh 경계 탐색 (플레이어 지면 → 몬스터 방향)
+        Vector3 rayEnd = playerGround + dirToMonster * 50f;
+        
+        if (NavMesh.Raycast(playerGround, rayEnd, out NavMeshHit hit, NavMesh.AllAreas))
+        {
+            // 경계 찾음 = 다른 NavMesh 영역
+            edgePos = hit.position;
+            
+            // 몬스터와 끝단 사이의 수평 거리
+            Vector3 toEdge = edgePos - transform.position;
+            toEdge.y = 0;
+            distanceToEdge = toEdge.magnitude;
+            
+            return true;
+        }
+        
+        // 경계 없음 = 같은 NavMesh (걸어가면 됨)
+        return false;
+    }
+
     private bool ShouldAttemptJump()
     {
         if (_jumpCooldownTimer > 0f) return false;
@@ -313,14 +337,6 @@ public class Monster : MonoBehaviour
             
         float heightDiff = targetHeight - transform.position.y;
         float maxJumpHeight = CalculateMaxJumpHeight();
-        
-        // 수평 거리 계산 (플레이어 지면 기준)
-        Vector3 targetPos = _lastKnownPlayerGroundPos != Vector3.zero 
-            ? _lastKnownPlayerGroundPos 
-            : _player.transform.position;
-        Vector3 toTarget = targetPos - transform.position;
-        toTarget.y = 0;
-        float horizontalDist = toTarget.magnitude;
 
         // 높이 조건 체크
         bool isTargetAbove = heightDiff >= _minHeightDiffForJump;
@@ -330,7 +346,21 @@ public class Monster : MonoBehaviour
         if (isTargetBelow && Mathf.Abs(heightDiff) > MAX_FALL_HEIGHT) return false;
         if (!isTargetAbove && !isTargetBelow) return false;
 
-        // 수평 거리 조건
+        // 수평 거리 조건: 플레이어 지면 끝단까지 거리로 판단
+        float horizontalDist;
+        
+        if (TryGetPlatformEdge(out Vector3 edgePos, out float distToEdge))
+        {
+            // 끝단 찾음 → 끝단까지 거리로 판단
+            horizontalDist = distToEdge;
+        }
+        else
+        {
+            // 같은 NavMesh → 점프 불필요
+            return false;
+        }
+
+        // 최대 점프 거리 계산
         float effectiveMaxDist = isTargetBelow 
             ? CalculateMaxFallDistance(Mathf.Abs(heightDiff)) 
             : CalculateMaxJumpDistance();
@@ -338,18 +368,22 @@ public class Monster : MonoBehaviour
         if (horizontalDist > effectiveMaxDist) return false;
 
         // 경로 상태 확인
+        Vector3 targetPos = _lastKnownPlayerGroundPos != Vector3.zero 
+            ? _lastKnownPlayerGroundPos 
+            : _player.transform.position;
+            
         NavMeshPath path = new NavMeshPath();
         bool hasPath = _agent.CalculatePath(targetPos, path);
 
         if (!hasPath || path.status == NavMeshPathStatus.PathInvalid)
         {
-            Debug.Log($"[Monster] 점프 판단: 경로 없음 → 점프 (높이차:{heightDiff:F2}m, 거리:{horizontalDist:F2}m)");
+            Debug.Log($"[Monster] 점프 판단: 경로 없음 → 점프 (높이차:{heightDiff:F2}m, 끝단거리:{horizontalDist:F2}m)");
             return true;
         }
 
         if (path.status == NavMeshPathStatus.PathPartial)
         {
-            Debug.Log($"[Monster] 점프 판단: 경로 불완전 → 점프 (높이차:{heightDiff:F2}m)");
+            Debug.Log($"[Monster] 점프 판단: 경로 불완전 → 점프 (끝단거리:{horizontalDist:F2}m)");
             return true;
         }
 
@@ -761,7 +795,7 @@ public class Monster : MonoBehaviour
 
     #region 디버그 시각화
 
-    private void OnDrawGizmosSelected()
+private void OnDrawGizmosSelected()
     {
         if (_player == null) return;
 
@@ -782,7 +816,55 @@ public class Monster : MonoBehaviour
         {
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(_lastKnownPlayerGroundPos, 0.5f);
-            Gizmos.DrawLine(transform.position, _lastKnownPlayerGroundPos);
+            
+            // ========== NavMesh.Raycast 시각화 ==========
+            Vector3 playerGround = _lastKnownPlayerGroundPos;
+            Vector3 dirToMonster = transform.position - playerGround;
+            dirToMonster.y = 0;
+            
+            if (dirToMonster.sqrMagnitude > 0.01f)
+            {
+                dirToMonster.Normalize();
+                Vector3 rayEnd = playerGround + dirToMonster * 50f;
+                
+                // 레이캐스트 시작점 (흰색 구)
+                Gizmos.color = Color.white;
+                Gizmos.DrawSphere(playerGround + Vector3.up * 0.1f, 0.2f);
+                
+                if (NavMesh.Raycast(playerGround, rayEnd, out NavMeshHit hit, NavMesh.AllAreas))
+                {
+                    // 경계 찾음: 시작 → 끝단 (녹색), 끝단 → 레이 끝 (빨간 점선)
+                    Gizmos.color = Color.green;
+                    Gizmos.DrawLine(playerGround + Vector3.up * 0.1f, hit.position + Vector3.up * 0.1f);
+                    
+                    // 끝단 위치 (주황색 구)
+                    Gizmos.color = new Color(1f, 0.5f, 0f);
+                    Gizmos.DrawSphere(hit.position, 0.4f);
+                    
+                    // 끝단 이후 (빨간색 - NavMesh 없는 구간)
+                    Gizmos.color = Color.red;
+                    DrawDashedLine(hit.position + Vector3.up * 0.1f, rayEnd + Vector3.up * 0.1f, 0.5f);
+                    
+                    // 몬스터 ↔ 끝단 거리 (점프 판단 거리)
+                    Vector3 toEdge = hit.position - transform.position;
+                    toEdge.y = 0;
+                    float distToEdge = toEdge.magnitude;
+                    
+                    // 점프 가능 여부 표시
+                    bool canJump = distToEdge <= maxJumpDistance;
+                    Gizmos.color = canJump ? Color.green : Color.red;
+                    Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, hit.position + Vector3.up * 0.5f);
+                    
+                    // 거리 텍스트 위치에 구 표시
+                    Gizmos.DrawSphere(hit.position + Vector3.up * 1f, 0.15f);
+                }
+                else
+                {
+                    // 경계 없음: 전체 레이 (파란색) - 같은 NavMesh
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawLine(playerGround + Vector3.up * 0.1f, rayEnd + Vector3.up * 0.1f);
+                }
+            }
         }
 
         // 점프 중
@@ -791,6 +873,20 @@ public class Monster : MonoBehaviour
             Gizmos.color = Color.red;
             Gizmos.DrawSphere(_jumpStartPosition, 0.3f);
             Gizmos.DrawSphere(_jumpTargetPosition, 0.3f);
+            Gizmos.DrawLine(_jumpStartPosition, _jumpTargetPosition);
+        }
+    }
+
+    private void DrawDashedLine(Vector3 start, Vector3 end, float dashLength)
+    {
+        Vector3 direction = (end - start).normalized;
+        float distance = Vector3.Distance(start, end);
+        
+        for (float i = 0; i < distance; i += dashLength * 2)
+        {
+            Vector3 dashStart = start + direction * i;
+            Vector3 dashEnd = start + direction * Mathf.Min(i + dashLength, distance);
+            Gizmos.DrawLine(dashStart, dashEnd);
         }
     }
 
