@@ -1,5 +1,3 @@
-using UnityEngine;
-
 public enum EMonsterState
 {
     Idle,
@@ -8,6 +6,5 @@ public enum EMonsterState
     Attack,
     Hit,
     Death,
-    
-    
+    Jump
 }

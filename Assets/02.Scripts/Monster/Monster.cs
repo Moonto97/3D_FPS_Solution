@@ -42,15 +42,31 @@ public class Monster : MonoBehaviour
     
     private float _attackTimer = 0f;
     private Vector3 _defaultPosition;
-    private Vector3 _knockbackVelocity;  // 넉백 시 밀려날 방향과 힘
+    
+    
+    // 점프(OffMeshLink 통과) 관련 변수
+    private Vector3 _jumpStartPosition;
+    private Vector3 _jumpEndPosition;
+    private float _jumpProgress;           // 점프 진행도 (0~1)
+    private const float JUMP_DURATION = 0.5f;  // 점프 소요 시간
+    private const float JUMP_HEIGHT = 1.5f;    // 점프 최대 높이
+private Vector3 _knockbackVelocity;  // 넉백 시 밀려날 방향과 힘
 
-    private void Start()
+private void Start()
     {
         _defaultPosition = transform.position;
 
         _agent.speed = _monsterStats.MoveSpeed.Value;
-        
         _agent.stoppingDistance = _monsterStats.AttackDistance.Value;
+        
+        // OffMeshLink 수동 제어 (포물선 점프를 위해)
+        _agent.autoTraverseOffMeshLink = false;
+        
+        // NavMesh 배치 검증
+        if (!_agent.isOnNavMesh)
+        {
+            Debug.LogError($"[Monster] {gameObject.name}이 NavMesh 위에 없습니다! NavMesh 베이크 확인 필요.", this);
+        }
     }
     
     private void Update()
@@ -74,7 +90,12 @@ public class Monster : MonoBehaviour
                 Comeback();
                 break;
             
-            case EMonsterState.Attack:
+            
+            
+            case EMonsterState.Jump:
+                Jump();
+                break;
+case EMonsterState.Attack:
                 Attack();
                 break;
         }
@@ -95,49 +116,126 @@ public class Monster : MonoBehaviour
         }
     }
 
-    private void Trace()
+private void Trace()
     {
-        // 플레이어를 쫓아가는 상태
-        // Todo. Run 애니메이션 실행
-        
         float distance = Vector3.Distance(transform.position, _player.transform.position);
         
-        // 1. 플레이어를 향하는 방향을 구한다.
-        // Vector3 direction = (_player.transform.position - transform.position).normalized;
-        // 2. 방향에 따라 이동한다.
-        // _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
-        
-        // 방향 설정 필요 없이 도착지만 설정해주면 네비게이션 시스템에 의해 자동으로 이동한다.
+        // NavMeshAgent.SetDestination은 목적지 근처의 NavMesh 지점을 자동으로 찾음
+        // SamplePosition을 수동으로 하면 높이가 다른 NavMesh를 못 찾는 문제 발생
+        // 그래서 플레이어 위치를 직접 전달하고 NavMeshAgent가 알아서 처리하게 함
         _agent.SetDestination(_player.transform.position);
+        
+        // 디버그: 경로 상태 확인
+        if (!_agent.hasPath && !_agent.pathPending)
+        {
+            Debug.LogWarning($"[Monster] 경로 없음! 목적지:{_player.transform.position}, 상태:{_agent.pathStatus}");
+        }
         
         // 플레이어와의 거리가 공격범위내라면
         if (distance <= _monsterStats.AttackDistance.Value)
         {
             State = EMonsterState.Attack;
-            Debug.Log($"상태 전환: {State} -> Attack");
+            Debug.Log($"상태 전환: Trace -> Attack");
+            return;
         }
+        
         // 플레이어와의 거리가 감지범위 밖이라면
         if (distance >= _monsterStats.DetectDistance.Value)
         {
             State = EMonsterState.Comeback;
-            Debug.Log($"상태 전환: {State} -> Comeback");
+            Debug.Log($"상태 전환: Trace -> Comeback");
+            return;
         }
+        
+        // OffMeshLink 감지
+        TryHandleOffMeshLink();
     }
     
-    private void Comeback()
+private void Comeback()
     {
-        // 만약 플레이어가 다시 감지범위에 들어온다면 Trace
         float distance = Vector3.Distance(transform.position, _player.transform.position);
+        
+        // 플레이어가 다시 감지범위에 들어오면 추적 재개
         if (distance <= _monsterStats.DetectDistance.Value)
         {
-            Debug.Log($"상태 전환: {State} -> Trace");
+            Debug.Log($"상태 전환: Comeback -> Trace");
             State = EMonsterState.Trace;
+            return;
         }
-        // 현재 몬스터 포지션에서 defaultPosition 으로의 방향으로 이동
-        // Vector3 direction = (_defaultPosition - transform.position).normalized;
-        // _controller.Move(direction * _monsterStats.MoveSpeed.Value * Time.deltaTime);
+        
+        // 초기 위치로 복귀
         _agent.SetDestination(_defaultPosition);
+        
+        // 복귀 중에도 단차 만나면 점프
+        TryHandleOffMeshLink();
     }
+
+/// <summary>
+    /// OffMeshLink(NavMesh의 단차/점프 구간) 감지 및 Jump 상태 전환
+    /// NavMeshSurface의 Generate Links로 자동 생성된 링크 포함
+    /// </summary>
+    private void TryHandleOffMeshLink()
+    {
+        // 링크 위에 있지 않으면 무시
+        if (!_agent.isOnOffMeshLink) return;
+        
+        // 링크 데이터 추출
+        OffMeshLinkData linkData = _agent.currentOffMeshLinkData;
+        _jumpStartPosition = linkData.startPos;
+        _jumpEndPosition = linkData.endPos;
+        _jumpProgress = 0f;
+        
+        // NavMeshAgent 일시 정지 (수동으로 이동할 것이므로)
+        _agent.isStopped = true;
+        
+        float heightDiff = _jumpEndPosition.y - _jumpStartPosition.y;
+        Debug.Log($"링크 감지 - 높이차: {heightDiff:F2}m");
+        
+        State = EMonsterState.Jump;
+        Debug.Log($"상태 전환: -> Jump");
+    }
+
+/// <summary>
+    /// 포물선 점프로 OffMeshLink 통과
+    /// </summary>
+    private void Jump()
+    {
+        _jumpProgress += Time.deltaTime / JUMP_DURATION;
+        
+        if (_jumpProgress >= 1f)
+        {
+            // 점프 완료
+            _jumpProgress = 1f;
+            transform.position = _jumpEndPosition;
+            
+            // OffMeshLink 통과 완료 알림
+            _agent.CompleteOffMeshLink();
+            
+            // NavMeshAgent 재활성화
+            _agent.isStopped = false;
+            
+            State = EMonsterState.Trace;
+            Debug.Log($"상태 전환: Jump -> Trace");
+            return;
+        }
+        
+        // 포물선 이동 계산
+        // 수평 이동: 시작점에서 끝점으로 선형 보간
+        Vector3 horizontalPos = Vector3.Lerp(_jumpStartPosition, _jumpEndPosition, _jumpProgress);
+        
+        // 수직 이동: 포물선 (0에서 시작해서 0.5에서 최대, 1에서 0)
+        // 공식: 4 * h * t * (1 - t) 로 최대 높이 h에 도달
+        float parabola = 4f * JUMP_HEIGHT * _jumpProgress * (1f - _jumpProgress);
+        
+        // 최종 위치 = 수평 위치 + 포물선 높이
+        transform.position = new Vector3(
+            horizontalPos.x,
+            horizontalPos.y + parabola,
+            horizontalPos.z
+        );
+    }
+
+
     
     private void Attack()
     {
