@@ -28,6 +28,7 @@ public class Monster : MonoBehaviour
     private Vector3 _jumpStartPosition;
     private Vector3 _jumpTargetPosition;
     private Vector3 _jumpVelocity;
+    private float _jumpTargetHeight;  // 하강 점프 시 목표 높이 (재시도 판단용)
     private float _jumpCooldownTimer;
     
     private const float GRAVITY = 20f;
@@ -345,8 +346,59 @@ private void SetTraceDestination()
         return false;
     }
 
+    /// <summary>
+    /// 하강 점프 시 착지 예상 지점을 계산한다.
+    /// 몬스터 끝단에서 아래로 Raycast하여 실제 착지 가능 지점 반환.
+    /// </summary>
+    private bool TryGetDownwardLandingPosition(out Vector3 landingPos)
+    {
+        landingPos = Vector3.zero;
+        
+        // 몬스터 끝단 찾기
+        if (!TryGetMonsterNavMeshEdge(out Vector3 edgePos))
+        {
+            return false;
+        }
+        
+        // 끝단에서 살짝 플레이어 방향으로 이동한 위치 (끝단 바깥)
+        Vector3 dirToPlayer = _player.transform.position - edgePos;
+        dirToPlayer.y = 0;
+        
+        if (dirToPlayer.sqrMagnitude < 0.01f) return false;
+        
+        dirToPlayer.Normalize();
+        
+        // 끝단에서 1m 더 나간 위치에서 아래로 Raycast
+        Vector3 rayStart = edgePos + dirToPlayer * 1.0f + Vector3.up * 0.5f;
+        
+        // Physics Raycast로 실제 지형 감지
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, MAX_FALL_HEIGHT + 5f, _groundLayer))
+        {
+            // NavMesh 위치로 보정
+            if (NavMesh.SamplePosition(hit.point, out NavMeshHit navHit, 2f, NavMesh.AllAreas))
+            {
+                landingPos = navHit.position;
+                return true;
+            }
+            
+            // NavMesh 없으면 Physics 결과 사용
+            landingPos = hit.point;
+            return true;
+        }
+        
+        // Physics 실패 시 플레이어 지면 위치 사용
+        if (_lastKnownPlayerGroundPos != Vector3.zero)
+        {
+            landingPos = _lastKnownPlayerGroundPos;
+            return true;
+        }
+        
+        return false;
+    }
 
-    private bool ShouldAttemptJump()
+
+
+private bool ShouldAttemptJump()
     {
         if (_jumpCooldownTimer > 0f) return false;
 
@@ -360,19 +412,53 @@ private void SetTraceDestination()
         bool isTargetAbove = heightDiff >= _minHeightDiffForJump;
         bool isTargetBelow = heightDiff <= -_minHeightDiffForJump;
         
+        // 높이 조건 체크
         if (isTargetAbove && heightDiff > maxJumpHeight) return false;
         if (isTargetBelow && Mathf.Abs(heightDiff) > MAX_FALL_HEIGHT) return false;
         if (!isTargetAbove && !isTargetBelow) return false;
 
+        // ========== 상승/하강에 따른 수평 거리 계산 ==========
         float horizontalDist;
         
-        if (TryGetPlatformEdge(out Vector3 edgePos, out float distToEdge))
+        if (isTargetAbove)
         {
-            horizontalDist = distToEdge;
+            // 상승: 플레이어 플랫폼 끝단까지 거리
+            if (TryGetPlatformEdge(out Vector3 platformEdge, out float distToEdge))
+            {
+                horizontalDist = distToEdge;
+            }
+            else
+            {
+                return false;
+            }
         }
         else
         {
-            return false;
+            // 하강: 착지 예상 지점이 실제로 아래인지 확인
+            if (!TryGetDownwardLandingPosition(out Vector3 landingPos))
+            {
+                return false;
+            }
+            
+            // 착지 지점이 목표(플레이어 지면)와 비슷한 높이인지 확인
+            float landingHeightDiff = Mathf.Abs(landingPos.y - targetHeight);
+            if (landingHeightDiff > 1.5f)
+            {
+                // 착지 지점이 목표와 너무 다름 = 중간 플랫폼에 착지할 것
+                return false;
+            }
+            
+            // 몬스터 끝단 → 착지 지점까지 수평 거리
+            if (TryGetMonsterNavMeshEdge(out Vector3 monsterEdge))
+            {
+                Vector3 toLanding = landingPos - monsterEdge;
+                toLanding.y = 0;
+                horizontalDist = toLanding.magnitude;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         float effectiveMaxDist = isTargetBelow 
@@ -381,6 +467,7 @@ private void SetTraceDestination()
             
         if (horizontalDist > effectiveMaxDist) return false;
 
+        // ========== 경로 기반 점프 필요성 판단 ==========
         Vector3 targetPos = _lastKnownPlayerGroundPos != Vector3.zero 
             ? _lastKnownPlayerGroundPos 
             : _player.transform.position;
@@ -388,15 +475,17 @@ private void SetTraceDestination()
         NavMeshPath path = new NavMeshPath();
         bool hasPath = _agent.CalculatePath(targetPos, path);
 
+        string jumpType = isTargetAbove ? "상승" : "하강";
+
         if (!hasPath || path.status == NavMeshPathStatus.PathInvalid)
         {
-            Debug.Log($"[Monster] 점프 판단: 경로 없음 → 점프 (높이차:{heightDiff:F2}m, 끝단거리:{horizontalDist:F2}m)");
+            Debug.Log($"[Monster] {jumpType} 점프 판단: 경로 없음");
             return true;
         }
 
         if (path.status == NavMeshPathStatus.PathPartial)
         {
-            Debug.Log($"[Monster] 점프 판단: 경로 불완전 → 점프 (끝단거리:{horizontalDist:F2}m)");
+            Debug.Log($"[Monster] {jumpType} 점프 판단: 경로 불완전");
             return true;
         }
 
@@ -405,13 +494,13 @@ private void SetTraceDestination()
 
         if (pathDistance > directDistance * PATH_DETOUR_THRESHOLD)
         {
-            Debug.Log($"[Monster] 점프 판단: 우회 경로 → 점프");
+            Debug.Log($"[Monster] {jumpType} 점프 판단: 우회 경로");
             return true;
         }
 
         if (_stuckTimer >= STUCK_THRESHOLD)
         {
-            Debug.Log("[Monster] 점프 판단: 이동 막힘 → 점프");
+            Debug.Log($"[Monster] {jumpType} 점프 판단: 이동 막힘");
             return true;
         }
 
@@ -478,7 +567,7 @@ private void SetTraceDestination()
 
     #region 점프 실행 로직
 
-    private void TryStartJump()
+private void TryStartJump()
     {
         if (!TryFindLandingPosition(out Vector3 landingPos))
         {
@@ -496,8 +585,27 @@ private void SetTraceDestination()
             return;
         }
 
+        // ========== 상승 점프 시 천장 체크 ==========
+        if (isJumpingUp)
+        {
+            float maxJumpHeight = CalculateMaxJumpHeight();
+            
+            // 몬스터 바로 위로 Raycast - 천장 있으면 점프 불가
+            if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.up, maxJumpHeight, _groundLayer))
+            {
+                _jumpCooldownTimer = JUMP_FAIL_COOLDOWN;
+                Debug.Log("[Monster] 점프 실패: 위에 천장 있음");
+                return;
+            }
+        }
+
         _jumpStartPosition = transform.position;
         _jumpTargetPosition = landingPos;
+        
+        // 하강 점프 시 재시도 판단용 목표 높이 저장
+        _jumpTargetHeight = _lastKnownPlayerGroundPos != Vector3.zero 
+            ? _lastKnownPlayerGroundPos.y 
+            : _player.transform.position.y;
         
         Vector3 horizontalDir = (landingPos - transform.position);
         horizontalDir.y = 0;
@@ -658,7 +766,7 @@ private void SetTraceDestination()
         return false;
     }
 
-    private void ExecuteJump()
+private void ExecuteJump()
     {
         _jumpVelocity.y -= GRAVITY * Time.deltaTime;
         transform.position += _jumpVelocity * Time.deltaTime;
@@ -698,7 +806,7 @@ private void SetTraceDestination()
         }
     }
 
-    private void CompleteJump(Vector3 landingPosition)
+private void CompleteJump(Vector3 landingPosition)
     {
         if (NavMesh.SamplePosition(landingPosition, out NavMeshHit hit, 2f, NavMesh.AllAreas))
         {
@@ -717,8 +825,20 @@ private void SetTraceDestination()
         _stuckTimer = 0f;
         _lastPosition = transform.position;
 
+        // ========== 착지 높이 검증: 목표보다 너무 높으면 재시도 ==========
+        float landedHeight = transform.position.y;
+        float heightDiffFromTarget = landedHeight - _jumpTargetHeight;
+        
+        if (heightDiffFromTarget > 1.5f)
+        {
+            // 목표보다 1.5m 이상 높은 곳에 착지 = 중간 플랫폼에 걸림
+            // 쿨다운 없이 재시도 가능하게
+            _jumpCooldownTimer = 0f;
+            Debug.Log($"[Monster] 점프 재시도 필요: 착지높이:{landedHeight:F2}m, 목표:{_jumpTargetHeight:F2}m");
+        }
+
         State = EMonsterState.Trace;
-        Debug.Log($"[Monster] 점프 완료 - 높이: {transform.position.y:F2}m");
+        Debug.Log($"[Monster] 점프 완료 - 높이: {landedHeight:F2}m");
     }
 
     private void ForceCompleteJump()
@@ -816,64 +936,73 @@ private void OnDrawGizmosSelected()
 
         float maxJumpHeight = CalculateMaxJumpHeight();
         float maxJumpDistance = CalculateMaxJumpDistance();
+        
+        float targetHeight = _lastKnownPlayerGroundPos != Vector3.zero 
+            ? _lastKnownPlayerGroundPos.y 
+            : _player.transform.position.y;
+        float heightDiff = targetHeight - transform.position.y;
+        bool isTargetBelow = heightDiff <= -_minHeightDiffForJump;
 
-        // 최대 점프 높이 (파란색)
+        // 최대 점프 높이 (파란색 박스)
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireCube(transform.position + Vector3.up * (maxJumpHeight / 2f), 
                            new Vector3(1f, maxJumpHeight, 1f));
 
-        // 상승 점프 거리 (노란색)
+        // 점프 가능 거리 (노란색 원)
         Gizmos.color = Color.yellow;
         DrawWireCircle(transform.position, maxJumpDistance, 32);
 
-        // ========== 몬스터 NavMesh 끝단 시각화 ==========
+        // 몬스터 NavMesh 끝단 (청록색)
         if (TryGetMonsterNavMeshEdge(out Vector3 monsterEdge))
         {
-            // 몬스터 → 끝단 (청록색 선)
             Gizmos.color = Color.cyan;
-            Gizmos.DrawLine(transform.position + Vector3.up * 0.2f, monsterEdge + Vector3.up * 0.2f);
-            
-            // 몬스터 NavMesh 끝단 (청록색 구)
             Gizmos.DrawSphere(monsterEdge, 0.5f);
+            Gizmos.DrawLine(transform.position + Vector3.up * 0.2f, monsterEdge + Vector3.up * 0.2f);
         }
 
-        // ========== 플레이어 지면 & 플랫폼 끝단 시각화 ==========
+        // 플레이어 지면 (마젤타)
         if (_lastKnownPlayerGroundPos != Vector3.zero)
         {
-            // 플레이어 지면 (마젠타)
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(_lastKnownPlayerGroundPos, 0.5f);
             
-            // 플랫폼 끝단 (NavMesh.Raycast: 플레이어 지면 → 몬스터 방향)
-            Vector3 playerGround = _lastKnownPlayerGroundPos;
-            Vector3 dirToMonster = transform.position - playerGround;
-            dirToMonster.y = 0;
-            
-            if (dirToMonster.sqrMagnitude > 0.01f)
+            if (isTargetBelow)
             {
-                dirToMonster.Normalize();
-                Vector3 rayEnd = playerGround + dirToMonster * 50f;
-                
-                if (NavMesh.Raycast(playerGround, rayEnd, out NavMeshHit hit, NavMesh.AllAreas))
+                // ========== 하강 점프: 몬스터 끝단 → 플레이어 지면 ==========
+                if (TryGetMonsterNavMeshEdge(out Vector3 edge))
+                {
+                    Vector3 toPlayerGround = _lastKnownPlayerGroundPos - edge;
+                    toPlayerGround.y = 0;
+                    float dist = toPlayerGround.magnitude;
+                    float maxFallDist = CalculateMaxFallDistance(Mathf.Abs(heightDiff));
+                    
+                    bool canJump = dist <= maxFallDist;
+                    Gizmos.color = canJump ? Color.green : Color.red;
+                    
+                    // 몬스터 끝단 → 플레이어 지면 (점프 판단 거리)
+                    Vector3 edgeAtPlayerHeight = new Vector3(edge.x, _lastKnownPlayerGroundPos.y, edge.z);
+                    Gizmos.DrawLine(edge + Vector3.up * 0.3f, edgeAtPlayerHeight + Vector3.up * 0.3f);
+                    Gizmos.DrawLine(edgeAtPlayerHeight + Vector3.up * 0.3f, _lastKnownPlayerGroundPos + Vector3.up * 0.3f);
+                }
+            }
+            else
+            {
+                // ========== 상승 점프: 몬스터 → 플랫폼 끝단 ==========
+                if (TryGetPlatformEdge(out Vector3 platformEdge, out float distToEdge))
                 {
                     // 플랫폼 끝단 (주황색)
                     Gizmos.color = new Color(1f, 0.5f, 0f);
-                    Gizmos.DrawSphere(hit.position, 0.4f);
-                    Gizmos.DrawLine(playerGround + Vector3.up * 0.1f, hit.position + Vector3.up * 0.1f);
+                    Gizmos.DrawSphere(platformEdge, 0.4f);
                     
-                    // 몬스터 ↔ 플랫폼 끝단 거리 (점프 판단 거리)
-                    Vector3 toEdge = hit.position - transform.position;
-                    toEdge.y = 0;
-                    float distToEdge = toEdge.magnitude;
-                    
+                    // 점프 가능 여부
                     bool canJump = distToEdge <= maxJumpDistance;
                     Gizmos.color = canJump ? Color.green : Color.red;
-                    Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, hit.position + Vector3.up * 0.5f);
+                    Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, platformEdge + Vector3.up * 0.5f);
                 }
             }
         }
 
-        // 현재 목적지 (흰색 와이어 구)
+        // 현재 목적지 (흰색)
         if (_currentDestination != Vector3.zero)
         {
             Gizmos.color = Color.white;
