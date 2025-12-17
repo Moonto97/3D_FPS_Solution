@@ -283,6 +283,7 @@ GameObject:
   - component: {fileID: 5896814241986697486}
   - component: {fileID: 2172919203720265082}
   - component: {fileID: 3746275912144847311}
+  - component: {fileID: 3689506521930192219}
   m_Layer: 8
   m_Name: Monster
   m_TagString: Untagged
@@ -401,6 +402,11 @@ MonoBehaviour:
   _playerStats: {fileID: 0}
   _controller: {fileID: 5896814241986697486}
   _monsterStats: {fileID: 3746275912144847311}
+  _agent: {fileID: 0}
+  _jumpController: {fileID: 3689506521930192219}
+  _groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!114 &3746275912144847311
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -429,3 +435,26 @@ MonoBehaviour:
     _value: 10
   KnockbackDecay:
     _value: 15
+  KnockbackForce:
+    _value: 0
+  MaxJumpHeight:
+    _value: 0
+  JumpDuration:
+    _value: 0
+  StuckThreshold:
+    _value: 0
+--- !u!114 &3689506521930192219
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8818849991473735847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba53024763859b94da2bcce568436b00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _jumpForce: 15
+  _jumpHorizontalSpeed: 5
+  _minHeightDiffForJump: 0.5
