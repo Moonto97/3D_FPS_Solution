@@ -1,4 +1,5 @@
 using System.Collections;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -18,6 +19,7 @@ public class Monster : MonoBehaviour
     [SerializeField] private CharacterController _controller;
     [SerializeField] private MonsterStats _monsterStats;
     [SerializeField] private NavMeshAgent _agent;
+    [SerializeField] private Animator _animatorController;
     
     [Header("점프 컨트롤러")]
     [SerializeField] private MonsterJumpController _jumpController;
@@ -55,6 +57,15 @@ public class Monster : MonoBehaviour
     #endregion
 
     #region 초기화
+
+    private void Awake()
+    {
+        if (_animatorController == null)
+        {
+            _animatorController = GetComponent<Animator>();
+        }
+    }
+    
     
     private void Start()
     {
@@ -150,6 +161,7 @@ public class Monster : MonoBehaviour
         if (Vector3.Distance(transform.position, _player.transform.position) <= _monsterStats.DetectDistance.Value)
         {
             State = EMonsterState.Trace;
+            _animatorController.SetTrigger("IdleToTrace");
             Debug.Log($"상태 전환: Idle -> Trace");
         }
     }
@@ -161,6 +173,7 @@ public class Monster : MonoBehaviour
         if (distance > _monsterStats.AttackDistance.Value)
         {
             State = EMonsterState.Trace;
+            _animatorController.SetTrigger("AttackToTrace");
             Debug.Log($"상태 전환: Attack -> Trace");
             return;
         }
@@ -169,8 +182,8 @@ public class Monster : MonoBehaviour
         if (_attackTimer >= _monsterStats.AttackSpeed.Value)
         {
             _attackTimer = 0f;
+            _animatorController.SetTrigger("AttackableToAttack");
             Debug.Log("플레이어 공격!");
-            _playerStats.TakeDamage(_monsterStats.Damage.Value);
         }
     }
 
@@ -185,6 +198,7 @@ public class Monster : MonoBehaviour
         if (distanceToPlayer <= _monsterStats.AttackDistance.Value)
         {
             State = EMonsterState.Attack;
+            _animatorController.SetTrigger("TraceToAttackable");
             Debug.Log($"상태 전환: Trace -> Attack");
             return;
         }
@@ -446,6 +460,7 @@ public class Monster : MonoBehaviour
 
     private IEnumerator Hit_Coroutine()
     {
+        _animatorController.SetTrigger("Hit");
         // 최소 피격 시간 대기
         yield return new WaitForSeconds(0.2f);
         
@@ -453,6 +468,7 @@ public class Monster : MonoBehaviour
         yield return new WaitUntil(() => !_isKnockbackActive);
         
         _jumpController?.ResetStuckDetection();
+        _animatorController.SetTrigger("HitToIdle");
         State = EMonsterState.Idle;
     }
 
