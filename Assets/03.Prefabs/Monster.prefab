@@ -405,7 +405,7 @@ MonoBehaviour:
   _controller: {fileID: 5896814241986697486}
   _monsterStats: {fileID: 3746275912144847311}
   _agent: {fileID: 1214171482781068861}
-  _animatorController: {fileID: 3977633635055626316}
+  _animator: {fileID: 3977633635055626316}
   _jumpController: {fileID: 3689506521930192219}
   _groundLayer:
     serializedVersion: 2
@@ -431,7 +431,7 @@ MonoBehaviour:
   DetectDistance:
     _value: 60
   AttackSpeed:
-    _value: 1
+    _value: 0.1
   AttackDistance:
     _value: 2.5
   Damage:
