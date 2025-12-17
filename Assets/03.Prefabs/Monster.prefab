@@ -425,24 +425,26 @@ MonoBehaviour:
     _regenValue: 0
   MoveSpeed:
     _value: 5
-  AttackSpeed:
-    _value: 2
   DetectDistance:
     _value: 8
+  AttackSpeed:
+    _value: 2
   AttackDistance:
     _value: 1.2
   Damage:
     _value: 10
-  KnockbackDecay:
-    _value: 15
   KnockbackForce:
     _value: 0
-  MaxJumpHeight:
-    _value: 0
-  JumpDuration:
-    _value: 0
+  KnockbackDecay:
+    _value: 15
+  JumpForce:
+    _value: 20
+  JumpHorizontalSpeed:
+    _value: 5
+  MinHeightDiffForJump:
+    _value: 0.5
   StuckThreshold:
-    _value: 0
+    _value: 0.5
 --- !u!114 &3689506521930192219
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -455,6 +457,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba53024763859b94da2bcce568436b00, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _jumpForce: 15
-  _jumpHorizontalSpeed: 5
-  _minHeightDiffForJump: 0.5

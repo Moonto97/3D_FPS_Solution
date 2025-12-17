@@ -5,6 +5,7 @@ using UnityEngine.AI;
 /// <summary>
 /// 몬스터의 점프 판단/실행/착지를 담당하는 컨트롤러.
 /// Monster.cs에서 분리되어 단일 책임 원칙(SRP)을 따름.
+/// 점프 관련 스탯은 MonsterStats에서 관리.
 /// </summary>
 public class MonsterJumpController : MonoBehaviour
 {
@@ -23,20 +24,7 @@ public class MonsterJumpController : MonoBehaviour
     private Transform _playerTransform;
     private NavMeshAgent _agent;
     private LayerMask _groundLayer;
-    
-    #endregion
-
-    #region Inspector 설정
-    
-    [Header("점프 설정")]
-    [SerializeField, Tooltip("점프력 (수직 초기 속도)")]
-    private float _jumpForce = 10f;
-    
-    [SerializeField, Tooltip("점프 중 수평 이동 속도")]
-    private float _jumpHorizontalSpeed = 5f;
-
-    [SerializeField, Tooltip("점프 판단 최소 고저차 (m)")]
-    private float _minHeightDiffForJump = 0.5f;
+    private MonsterStats _stats;
     
     #endregion
 
@@ -47,7 +35,16 @@ public class MonsterJumpController : MonoBehaviour
     private const float JUMP_FAIL_COOLDOWN = 3.0f;
     private const float PATH_DETOUR_THRESHOLD = 2.0f;
     private const float MAX_FALL_HEIGHT = 10f;
-    private const float STUCK_THRESHOLD = 0.5f;
+    
+    #endregion
+
+    #region 스탯 접근자 (MonsterStats에서 값 가져오기)
+    
+    // null 체크 + 기본값으로 안전하게 접근
+    private float JumpForce => _stats?.JumpForce?.Value ?? 10f;
+    private float JumpHorizontalSpeed => _stats?.JumpHorizontalSpeed?.Value ?? 5f;
+    private float MinHeightDiff => _stats?.MinHeightDiffForJump?.Value ?? 0.5f;
+    private float StuckThreshold => _stats?.StuckThreshold?.Value ?? 0.5f;
     
     #endregion
 
@@ -64,6 +61,7 @@ public class MonsterJumpController : MonoBehaviour
     private float _stuckTimer;
     
     public bool IsJumping { get; private set; }
+    public bool IsInitialized => _playerTransform != null;
     
     #endregion
 
@@ -72,16 +70,22 @@ public class MonsterJumpController : MonoBehaviour
     /// <summary>
     /// Monster.cs에서 호출하여 필요한 참조를 주입한다.
     /// </summary>
-    public void Initialize(Transform playerTransform, NavMeshAgent agent, LayerMask groundLayer)
+    public void Initialize(Transform playerTransform, NavMeshAgent agent, LayerMask groundLayer, MonsterStats stats)
     {
         _playerTransform = playerTransform;
         _agent = agent;
         _groundLayer = groundLayer;
+        _stats = stats;
         
         _lastPosition = transform.position;
         _jumpCooldownTimer = 0f;
         _stuckTimer = 0f;
         IsJumping = false;
+        
+        if (_stats == null)
+        {
+            Debug.LogWarning($"[JumpController] {gameObject.name}: MonsterStats가 null입니다. 기본값 사용.", this);
+        }
     }
     
     #endregion
@@ -118,7 +122,27 @@ public class MonsterJumpController : MonoBehaviour
     
     public bool TryGetNavMeshEdge(out Vector3 edgePos) => TryGetMonsterNavMeshEdge(out edgePos);
     
-    public void ResetStuckDetection()
+    /// <summary>
+    /// 점프를 강제 취소한다. 피격 시 호출.
+    /// 현재 수직 속도를 반환하여 넉백에 사용.
+    /// </summary>
+    public float CancelJump()
+    {
+        if (!IsJumping) return 0f;
+        
+        float currentVerticalVelocity = _jumpVelocity.y;
+        
+        // 점프 상태만 정리 (Agent는 Monster가 관리)
+        IsJumping = false;
+        _jumpVelocity = Vector3.zero;
+        
+        Debug.Log($"[JumpController] 점프 취소 - 수직속도: {currentVerticalVelocity:F2}");
+        
+        return currentVerticalVelocity;
+    }
+    
+    
+public void ResetStuckDetection()
     {
         _stuckTimer = 0f;
         _lastPosition = transform.position;
@@ -255,8 +279,8 @@ public class MonsterJumpController : MonoBehaviour
         float heightDiff = targetHeight - transform.position.y;
         float maxJumpHeight = CalculateMaxJumpHeight();
 
-        bool isTargetAbove = heightDiff >= _minHeightDiffForJump;
-        bool isTargetBelow = heightDiff <= -_minHeightDiffForJump;
+        bool isTargetAbove = heightDiff >= MinHeightDiff;
+        bool isTargetBelow = heightDiff <= -MinHeightDiff;
         
         if (isTargetAbove && heightDiff > maxJumpHeight) return false;
         if (isTargetBelow && Mathf.Abs(heightDiff) > MAX_FALL_HEIGHT) return false;
@@ -319,7 +343,7 @@ public class MonsterJumpController : MonoBehaviour
             return true;
         }
 
-        if (_stuckTimer >= STUCK_THRESHOLD)
+        if (_stuckTimer >= StuckThreshold)
         {
             Debug.Log($"[JumpController] {jumpType} 점프 판단: 이동 막힘");
             return true;
@@ -361,23 +385,23 @@ public class MonsterJumpController : MonoBehaviour
 
     private float CalculateMaxJumpHeight()
     {
-        return (_jumpForce * _jumpForce) / (2f * GRAVITY);
+        return (JumpForce * JumpForce) / (2f * GRAVITY);
     }
 
     private float CalculateMaxJumpDistance()
     {
-        float airTime = 2f * _jumpForce / GRAVITY;
-        return airTime * _jumpHorizontalSpeed * 0.7f;
+        float airTime = 2f * JumpForce / GRAVITY;
+        return airTime * JumpHorizontalSpeed * 0.7f;
     }
 
     private float CalculateMaxFallDistance(float fallHeight)
     {
-        float riseTime = _jumpForce / GRAVITY;
+        float riseTime = JumpForce / GRAVITY;
         float totalFallHeight = fallHeight + CalculateMaxJumpHeight();
         float fallTime = Mathf.Sqrt(2f * totalFallHeight / GRAVITY);
         float totalAirTime = riseTime + fallTime;
         
-        return totalAirTime * _jumpHorizontalSpeed * 0.7f;
+        return totalAirTime * JumpHorizontalSpeed * 0.7f;
     }
     
     #endregion
@@ -396,12 +420,13 @@ public class MonsterJumpController : MonoBehaviour
         float heightDiff = landingPos.y - transform.position.y;
         bool isJumpingUp = heightDiff > 0;
         
-        if (Mathf.Abs(heightDiff) < _minHeightDiffForJump)
+        if (Mathf.Abs(heightDiff) < MinHeightDiff)
         {
             _jumpCooldownTimer = JUMP_FAIL_COOLDOWN;
             return;
         }
 
+        // 상승 점프 시 천장 체크
         if (isJumpingUp)
         {
             float maxJumpHeight = CalculateMaxJumpHeight();
@@ -431,7 +456,7 @@ public class MonsterJumpController : MonoBehaviour
             horizontalDir = transform.forward;
         }
 
-        _jumpVelocity = horizontalDir * _jumpHorizontalSpeed + Vector3.up * _jumpForce;
+        _jumpVelocity = horizontalDir * JumpHorizontalSpeed + Vector3.up * JumpForce;
         _jumpCooldownTimer = JUMP_COOLDOWN;
 
         _agent.isStopped = true;
@@ -496,8 +521,8 @@ public class MonsterJumpController : MonoBehaviour
                     float foundHeightDiff = foundHeight - myHeight;
                     
                     bool validHeight = isJumpingUp
-                        ? (foundHeightDiff >= _minHeightDiffForJump && foundHeightDiff <= maxJumpHeight)
-                        : (foundHeightDiff <= -_minHeightDiffForJump && Mathf.Abs(foundHeightDiff) <= MAX_FALL_HEIGHT);
+                        ? (foundHeightDiff >= MinHeightDiff && foundHeightDiff <= maxJumpHeight)
+                        : (foundHeightDiff <= -MinHeightDiff && Mathf.Abs(foundHeightDiff) <= MAX_FALL_HEIGHT);
                     
                     if (validHeight)
                     {
@@ -528,6 +553,7 @@ public class MonsterJumpController : MonoBehaviour
             return true;
         }
 
+        // 폴백: 플레이어 지면 직접 사용
         if (_lastKnownPlayerGroundPos != Vector3.zero)
         {
             if (NavMesh.SamplePosition(_lastKnownPlayerGroundPos, out NavMeshHit groundHit, 3f, NavMesh.AllAreas))
@@ -538,8 +564,8 @@ public class MonsterJumpController : MonoBehaviour
                 float horizontalDist = toGround.magnitude;
 
                 bool validHeight = isJumpingUp
-                    ? (foundHeightDiff >= _minHeightDiffForJump && foundHeightDiff <= maxJumpHeight)
-                    : (foundHeightDiff <= -_minHeightDiffForJump && Mathf.Abs(foundHeightDiff) <= MAX_FALL_HEIGHT);
+                    ? (foundHeightDiff >= MinHeightDiff && foundHeightDiff <= maxJumpHeight)
+                    : (foundHeightDiff <= -MinHeightDiff && Mathf.Abs(foundHeightDiff) <= MAX_FALL_HEIGHT);
 
                 if (validHeight && horizontalDist <= maxJumpDistance)
                 {
@@ -567,6 +593,7 @@ public class MonsterJumpController : MonoBehaviour
             );
         }
 
+        // 하강 중 착지 감지
         if (_jumpVelocity.y < 0)
         {
             if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out RaycastHit hit, 0.5f, _groundLayer))
@@ -585,6 +612,7 @@ public class MonsterJumpController : MonoBehaviour
             }
         }
 
+        // 안전장치: 너무 많이 떨어지면 강제 착지
         if (transform.position.y < _jumpStartPosition.y - MAX_FALL_HEIGHT - 2f)
         {
             Debug.LogWarning("[JumpController] 점프 타임아웃 - 강제 착지");
@@ -612,6 +640,7 @@ public class MonsterJumpController : MonoBehaviour
         _lastPosition = transform.position;
         IsJumping = false;
 
+        // 착지 높이 검증: 목표보다 너무 높으면 재시도 허용
         float landedHeight = transform.position.y;
         float heightDiffFromTarget = landedHeight - _jumpTargetHeight;
         
@@ -656,7 +685,7 @@ public class MonsterJumpController : MonoBehaviour
     public float GetMaxJumpHeight() => CalculateMaxJumpHeight();
     public float GetMaxJumpDistance() => CalculateMaxJumpDistance();
     public float GetMaxFallDistance(float fallHeight) => CalculateMaxFallDistance(fallHeight);
-    public float MinHeightDiffForJump => _minHeightDiffForJump;
+    public float MinHeightDiffForJump => MinHeightDiff;
     public Vector3 LastKnownPlayerGroundPos => _lastKnownPlayerGroundPos;
     public Vector3 JumpStartPosition => _jumpStartPosition;
     public Vector3 JumpTargetPosition => _jumpTargetPosition;
