@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 플레이어 총 발사 처리
-/// 책임: 총 발사 + 탄약 관리 + 재장전
+/// 책임: 총 발사 + 탄약 관리 + 재장전 + 발사 모드 전환
 /// 풀링은 ObjectPoolManager에, 데이터는 GunData에 위임
 /// </summary>
 public class PlayerGunFire : MonoBehaviour
@@ -33,6 +33,12 @@ public class PlayerGunFire : MonoBehaviour
     private bool _isReloading;     // 재장전 중 여부
     private float _nextFireTime;   // 다음 발사 가능 시간
 
+    // === 발사 모드 ===
+    private EFireMode _currentFireMode = EFireMode.Auto;
+    private int _burstShotsRemaining;       // 점사 모드에서 남은 발사 수
+    private bool _isBurstFiring;            // 점사 중 여부
+    private const int BURST_COUNT = 3;      // 3점사
+
     // === 이벤트: UI 연동용 ===
     // Action<현재탄약, 예비탄약>: UI가 이 이벤트를 구독해서 탄약 수 업데이트
     public event Action<int, int> OnAmmoChanged;
@@ -42,11 +48,15 @@ public class PlayerGunFire : MonoBehaviour
     
     // Action<bool>: 재장전 시작/종료 알림
     public event Action<bool> OnReloadStateChanged;
+    
+    // Action<EFireMode>: 발사 모드 변경 알림 (UI 표시용)
+    public event Action<EFireMode> OnFireModeChanged;
 
     // === 외부에서 읽기용 프로퍼티 ===
     public int CurrentAmmo => _currentAmmo;
     public int ReserveAmmo => _reserveAmmo;
     public bool IsReloading => _isReloading;
+    public EFireMode CurrentFireMode => _currentFireMode;
 
     private bool _isPoolInitialized = false;
 
@@ -78,6 +88,7 @@ public class PlayerGunFire : MonoBehaviour
 
         // UI에 초기 상태 알림
         OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
+        OnFireModeChanged?.Invoke(_currentFireMode);
 
         if (_gunData == null)
         {
@@ -128,20 +139,115 @@ public class PlayerGunFire : MonoBehaviour
     {
         if (GameManager.Instance.State != EGameState.Playing) return;
 
+        HandleFireModeInput();
         HandleFireInput();
         HandleReloadInput();
     }
 
     /// <summary>
-    /// 발사 입력 처리 (마우스 좌클릭 홀드 = 연사)
+    /// 발사 모드 전환 입력 처리 (B키)
+    /// Auto → Single → Burst → Auto 순환
+    /// </summary>
+    private void HandleFireModeInput()
+    {
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            // 점사 중에는 모드 변경 불가
+            if (_isBurstFiring) return;
+            
+            // 재장전 중에는 모드 변경 불가
+            if (_isReloading) return;
+
+            CycleFireMode();
+        }
+    }
+
+    /// <summary>
+    /// 발사 모드 순환 (Auto → Single → Burst → Auto)
+    /// </summary>
+    private void CycleFireMode()
+    {
+        _currentFireMode = _currentFireMode switch
+        {
+            EFireMode.Auto => EFireMode.Single,
+            EFireMode.Single => EFireMode.Burst,
+            EFireMode.Burst => EFireMode.Auto,
+            _ => EFireMode.Auto
+        };
+
+        OnFireModeChanged?.Invoke(_currentFireMode);
+        Debug.Log($"[PlayerGunFire] Fire mode changed to: {_currentFireMode}");
+    }
+
+    /// <summary>
+    /// 발사 입력 처리 (발사 모드에 따라 분기)
     /// </summary>
     private void HandleFireInput()
     {
-        // 연사: GetMouseButton (홀드 중 계속 true)
-        if (Input.GetMouseButton(0))
+        switch (_currentFireMode)
         {
-            TryFire();
+            case EFireMode.Auto:
+                // 연사: 홀드 중 계속 발사
+                if (Input.GetMouseButton(0))
+                {
+                    TryFire();
+                }
+                break;
+
+            case EFireMode.Single:
+                // 단발: 클릭 시 1발만 발사
+                if (Input.GetMouseButtonDown(0))
+                {
+                    TryFire();
+                }
+                break;
+
+            case EFireMode.Burst:
+                // 점사: 클릭 시 3발 연속 발사
+                if (Input.GetMouseButtonDown(0) && !_isBurstFiring)
+                {
+                    StartCoroutine(BurstFireCoroutine());
+                }
+                break;
         }
+    }
+
+    /// <summary>
+    /// 점사 발사 코루틴 (3발 연속 발사)
+    /// </summary>
+    private IEnumerator BurstFireCoroutine()
+    {
+        _isBurstFiring = true;
+        _burstShotsRemaining = BURST_COUNT;
+
+        float fireRate = _gunData != null ? _gunData.FireRate : DEFAULT_FIRE_RATE;
+
+        while (_burstShotsRemaining > 0)
+        {
+            // 재장전 중이면 점사 중단
+            if (_isReloading)
+            {
+                break;
+            }
+
+            // 탄약 없으면 점사 중단 + 재장전 시도
+            if (_currentAmmo <= 0)
+            {
+                TryReload();
+                break;
+            }
+
+            Fire();
+            _burstShotsRemaining--;
+
+            // 남은 발사가 있으면 연사 속도만큼 대기
+            if (_burstShotsRemaining > 0)
+            {
+                yield return new WaitForSeconds(fireRate);
+            }
+        }
+
+        _isBurstFiring = false;
     }
 
     /// <summary>
@@ -194,9 +300,8 @@ public class PlayerGunFire : MonoBehaviour
 
         // Ray 발사 (카메라 방향으로)
         Ray ray = new Ray(_fireTransform.position, Camera.main.transform.forward);
-        RaycastHit hitInfo;
 
-        if (Physics.Raycast(ray, out hitInfo))
+        if (Physics.Raycast(ray, out RaycastHit hitInfo))
         {
             PlayHitEffect(hitInfo.point, hitInfo.normal);
             ProcessDamage(hitInfo);
