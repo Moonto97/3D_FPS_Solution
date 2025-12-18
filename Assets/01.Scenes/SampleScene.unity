@@ -2429,6 +2429,11 @@ MonoBehaviour:
   _playerBombFire: {fileID: 1423029339}
   _bombCountText: {fileID: 1090098984}
   _displayFormat: '{0}/{1}'
+--- !u!95 &1090632060 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 279935175715714438, guid: d329539e771b6d647a80e01288985902, type: 3}
+  m_PrefabInstance: {fileID: 1284121726274907568}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1168974364
 GameObject:
   m_ObjectHideFlags: 0
@@ -3766,6 +3771,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 987166129}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!134 &1640112443
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ' (Instance)'
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!1 &1643690614
 GameObject:
   m_ObjectHideFlags: 0
@@ -4294,19 +4312,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!134 &1917612071
-PhysicsMaterial:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 2
-  m_DynamicFriction: 0.6
-  m_StaticFriction: 0.6
-  m_Bounciness: 0
-  m_FrictionCombine: 0
-  m_BounceCombine: 0
 --- !u!4 &1930053908 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 341014892262663532, guid: 5136d24794ec26a4fa6a8dec8fa1f8f4, type: 3}
@@ -4702,6 +4707,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 187695014463758961, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: _animator
+      value: 
+      objectReference: {fileID: 1090632060}
     - target: {fileID: 742437832148484114, guid: d329539e771b6d647a80e01288985902, type: 3}
       propertyPath: m_LocalPosition.x
       value: -7.38
@@ -4749,7 +4758,7 @@ PrefabInstance:
     - target: {fileID: 7066982933811239444, guid: d329539e771b6d647a80e01288985902, type: 3}
       propertyPath: m_Material
       value: 
-      objectReference: {fileID: 1917612071}
+      objectReference: {fileID: 1640112443}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

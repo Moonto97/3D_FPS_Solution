@@ -26,6 +26,8 @@ public class PlayerGunFire : MonoBehaviour
     [SerializeField] private string _hitEffectPoolTag = "HitEffect";
     [SerializeField] private int _poolInitialSize = 10;
     [SerializeField] private float _effectDuration = 2f;
+    
+    [SerializeField] private Animator _animator;
 
     // === 탄약 상태 (런타임) ===
     private int _currentAmmo;      // 현재 탄창의 탄약
@@ -59,6 +61,7 @@ public class PlayerGunFire : MonoBehaviour
     public EFireMode CurrentFireMode => _currentFireMode;
 
     private bool _isPoolInitialized = false;
+    
 
     // === 기본값 (GunData 없을 때 폴백) ===
     private const int DEFAULT_MAGAZINE_SIZE = 30;
@@ -287,6 +290,7 @@ public class PlayerGunFire : MonoBehaviour
     /// </summary>
     private void Fire()
     {
+        _animator.SetTrigger("AttackTrigger");
         // 탄약 소모
         _currentAmmo--;
         OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
