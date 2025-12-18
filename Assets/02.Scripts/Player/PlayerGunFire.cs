@@ -21,7 +21,15 @@ public class PlayerGunFire : MonoBehaviour
     [Tooltip("null이면 Main Camera에서 자동 탐색")]
     [SerializeField] private CameraRecoil _cameraRecoil;
 
-    [Header("Hit Effect (Pool)")]
+    [Header("Muzzle Flash")]
+    [Tooltip("총구 화염 프리팹 (Easy FPS MuzzelFlash 폴더에서 선택)")]
+    [SerializeField] private GameObject _muzzleFlashPrefab;
+
+    [Tooltip("총구 화염 생성 위치 (총구 끝)")]
+    [SerializeField] private Transform _muzzleFlashSpawnPoint;
+
+    
+[Header("Hit Effect (Pool)")]
     [SerializeField] private GameObject _hitEffectPrefab;
     [SerializeField] private string _hitEffectPoolTag = "HitEffect";
     [SerializeField] private int _poolInitialSize = 10;
@@ -61,6 +69,7 @@ public class PlayerGunFire : MonoBehaviour
     public EFireMode CurrentFireMode => _currentFireMode;
 
     private bool _isPoolInitialized = false;
+
     
 
     // === 기본값 (GunData 없을 때 폴백) ===
@@ -291,6 +300,9 @@ public class PlayerGunFire : MonoBehaviour
     private void Fire()
     {
         _animator.SetTrigger("AttackTrigger");
+
+        // 총구 화염 재생
+        PlayMuzzleFlash();
         // 탄약 소모
         _currentAmmo--;
         OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
@@ -431,4 +443,22 @@ public class PlayerGunFire : MonoBehaviour
             monster.TryTakeDamage(_damage);
         }
     }
+
+    /// <summary>
+    /// 총구 화염 재생 (Instantiate 방식 - 프리팹이 자동 파괴됨)
+    /// </summary>
+    private void PlayMuzzleFlash()
+    {
+        if (_muzzleFlashPrefab == null || _muzzleFlashSpawnPoint == null) return;
+
+        // 랜덤 Z축 회전으로 단조로움 방지
+        Quaternion rotation = _muzzleFlashSpawnPoint.rotation * Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
+        
+        // 프리팹 생성 (DestroyAfterTimeParticle이 자동으로 파괴함)
+        GameObject flash = Instantiate(_muzzleFlashPrefab, _muzzleFlashSpawnPoint.position, rotation);
+        flash.transform.SetParent(_muzzleFlashSpawnPoint);
+    }
+
+    
+
 }

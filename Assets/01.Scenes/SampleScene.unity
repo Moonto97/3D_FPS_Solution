@@ -2429,11 +2429,6 @@ MonoBehaviour:
   _playerBombFire: {fileID: 1423029339}
   _bombCountText: {fileID: 1090098984}
   _displayFormat: '{0}/{1}'
---- !u!95 &1090632060 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: 279935175715714438, guid: d329539e771b6d647a80e01288985902, type: 3}
-  m_PrefabInstance: {fileID: 1284121726274907568}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1168974364
 GameObject:
   m_ObjectHideFlags: 0
@@ -4707,10 +4702,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 187695014463758961, guid: d329539e771b6d647a80e01288985902, type: 3}
-      propertyPath: _animator
-      value: 
-      objectReference: {fileID: 1090632060}
+    - target: {fileID: 635118668194931782, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 635118668194931782, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 635118668194931782, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 635118668195192434, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 668174021861758198, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: timeToDestroy
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 742437832148484114, guid: d329539e771b6d647a80e01288985902, type: 3}
       propertyPath: m_LocalPosition.x
       value: -7.38
@@ -4759,6 +4770,18 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 1640112443}
+    - target: {fileID: 9139472371026023638, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.179
+      objectReference: {fileID: 0}
+    - target: {fileID: 9139472371026023638, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.259
+      objectReference: {fileID: 0}
+    - target: {fileID: 9139472371026023638, guid: d329539e771b6d647a80e01288985902, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.812
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
