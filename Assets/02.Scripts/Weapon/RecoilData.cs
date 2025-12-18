@@ -18,19 +18,10 @@ public class RecoilData : ScriptableObject
     [Tooltip("좌우 흔들림 최대 각도 (±)")]
     [SerializeField, Range(0f, 5f)] private float _horizontalRecoil = 1f;
 
-    [Header("Recovery (반동 회복)")]
-    [Tooltip("반동에서 회복되는 속도 (높을수록 빠름)")]
-    [SerializeField, Range(1f, 20f)] private float _recoverySpeed = 10f;
-    
-    [Tooltip("회복 시작까지 대기 시간")]
-    [SerializeField, Range(0f, 0.5f)] private float _recoveryDelay = 0.1f;
-
-    // 읽기 전용 프로퍼티로 외부 노출
+    // 읽기 전용 프로퍼티
     public float VerticalRecoil => _verticalRecoil;
     public float VerticalRandomness => _verticalRandomness;
     public float HorizontalRecoil => _horizontalRecoil;
-    public float RecoverySpeed => _recoverySpeed;
-    public float RecoveryDelay => _recoveryDelay;
 
     /// <summary>
     /// 랜덤성이 적용된 수직 반동값 반환

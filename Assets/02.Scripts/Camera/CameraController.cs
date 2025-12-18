@@ -299,8 +299,10 @@ public class CameraController : MonoBehaviour
         // 피벗 포인트: 플레이어 + 높이 오프셋
         Vector3 pivotPoint = _player.position + Vector3.up * _activeOffset.y;
         
-        // 카메라 회전에 따른 뒤로 빠지는 오프셋
-        Vector3 rotatedOffset = transform.rotation * new Vector3(0f, 0f, _activeOffset.z);
+        // Y축(수평) 회전만 추출 - 반동/상하 시선이 카메라 위치에 영향 주지 않도록
+        // 이유: 위를 보든 아래를 보든 카메라는 플레이어 뒤에 있어야 함
+        Quaternion horizontalRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+        Vector3 rotatedOffset = horizontalRotation * new Vector3(0f, 0f, _activeOffset.z);
         Vector3 desiredPosition = pivotPoint + rotatedOffset;
         
         // 충돌 감지 (3인칭일 때만 의미 있음)
