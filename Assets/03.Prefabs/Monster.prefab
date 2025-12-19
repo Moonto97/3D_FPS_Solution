@@ -409,9 +409,9 @@ MonoBehaviour:
   _jumpController: {fileID: 3689506521930192219}
   _goldCoinPrefab: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
   _goldDropChance: 1
-  _goldDropHeight: 1.5
-  _goldDropCountMin: 3
-  _goldDropCountMax: 7
+  _goldDropHeight: 10
+  _goldDropCountMin: 1
+  _goldDropCountMax: 1
   _groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -428,8 +428,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Health:
-    _maxValue: 100
-    _value: 100
+    _maxValue: 50
+    _value: 50
     _regenValue: 0
   MoveSpeed:
     _value: 5
@@ -441,6 +441,8 @@ MonoBehaviour:
     _value: 2.5
   Damage:
     _value: 5
+  InvincibilityDuration:
+    _value: 0
   KnockbackForce:
     _value: 5
   KnockbackDecay:
