@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 109637189177552401}
   m_Layer: 3
   m_Name: Bomb
-  m_TagString: Untagged
+  m_TagString: Bomb
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -150,5 +150,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _explosionEffectPrefab: {fileID: 1007127540951276732, guid: 3ace37360f306cb4aac03640550fa9ef, type: 3}
-  ExplosionRadius: 2
-  Damage: 1000
+  _explosionRadius: 2
+  _damage: 1000
+  _poolTag: Bomb
