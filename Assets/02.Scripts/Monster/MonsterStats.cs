@@ -14,6 +14,10 @@ public class MonsterStats : MonoBehaviour
     public ValueStat AttackDistance;
     public ValueStat Damage;
     
+    [Header("피격 설정")]
+    [Tooltip("피격 후 무적 시간 (초). 연타 방지용. 0이면 무적 없음.")]
+    public ValueStat InvincibilityDuration;
+    
     [Header("넉백 설정")]
     public ValueStat KnockbackForce;
     public ValueStat KnockbackDecay;

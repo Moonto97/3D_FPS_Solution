@@ -1,12 +1,15 @@
 using System.Collections;
-using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Serialization;
 
 /// <summary>
 /// 몬스터 메인 컨트롤러. 상태 머신, 이동, 전투를 담당.
 /// 점프 로직은 MonsterJumpController로 위임.
+/// 
+/// [피격 시스템 설계]
+/// - 무적: 짧은 타이머(_invincibilityTimer)로 연타 방지. State와 독립.
+/// - 넉백: _isKnockbackActive로 관리. 넉백 중에도 추가 피격 가능(무적 끝나면).
+/// - 애니메이션: 매 피격마다 "Hit" 트리거 재발동.
 /// </summary>
 public class Monster : MonoBehaviour
 {
@@ -52,17 +55,33 @@ public class Monster : MonoBehaviour
     private Vector3 _defaultPosition;
     private Vector3 _knockbackVelocity;
     
-    // 공중 넉백 (점프 중 피격 시)
-    // 넉백 상태
-    private bool _isKnockbackActive;      // 넉백 진행 중 여부
-    private bool _isAirborneKnockback;    // 공중 넉백 여부
+    // === 무적 시스템 (State와 독립) ===
+    private float _invincibilityTimer;
+    private const float DEFAULT_INVINCIBILITY = 0.1f;  // MonsterStats 없을 때 폴백
+    
+    // === 넉백 시스템 ===
+    private bool _isKnockbackActive;
+    private bool _isAirborneKnockback;    // 공중 넉백 여부 (점프 중 피격)
     private float _verticalKnockbackVelocity;
-    private const float KNOCKBACK_GRAVITY = 20f;
     private float _knockbackTimer;
+    private const float KNOCKBACK_GRAVITY = 20f;
+    
+    // 넉백 전 상태 저장 (복귀용)
+    private EMonsterState _preKnockbackState;
     
     // 목적지 캐싱 (매 프레임 SetDestination 방지)
     private Vector3 _currentDestination;
     private const float DESTINATION_UPDATE_THRESHOLD = 1.0f;
+    
+    #endregion
+
+    #region Properties
+    
+    /// <summary>무적 상태 여부. UI나 디버그용.</summary>
+    public bool IsInvincible => _invincibilityTimer > 0f;
+    
+    /// <summary>넉백 진행 중 여부.</summary>
+    public bool IsKnockbackActive => _isKnockbackActive;
     
     #endregion
 
@@ -82,7 +101,6 @@ public class Monster : MonoBehaviour
             _animator = GetComponent<Animator>();
         }
     }
-    
     
     private void Start()
     {
@@ -140,14 +158,22 @@ public class Monster : MonoBehaviour
     
     #endregion
 
+
     #region Update 루프
     
     private void Update()
     {
         if (GameManager.Instance.State != EGameState.Playing) return;
 
+        // 무적 타이머 감소 (State와 독립적으로 항상 실행)
+        UpdateInvincibility();
+        
         _jumpController?.UpdateCooldown();
         ApplyKnockBack();
+
+        // 사망 또는 넉백 중이면 AI 로직 스킵 (Agent 비활성 상태)
+        if (State == EMonsterState.Death) return;
+        if (_isKnockbackActive) return;
 
         switch (State)
         {
@@ -166,6 +192,17 @@ public class Monster : MonoBehaviour
             case EMonsterState.Attack:
                 Attack();
                 break;
+        }
+    }
+    
+    /// <summary>
+    /// 무적 타이머 감소. 매 프레임 호출.
+    /// </summary>
+    private void UpdateInvincibility()
+    {
+        if (_invincibilityTimer > 0f)
+        {
+            _invincibilityTimer -= Time.deltaTime;
         }
     }
     
@@ -233,6 +270,9 @@ public class Monster : MonoBehaviour
 
     private void SetTraceDestination()
     {
+        // 방어: Agent 비활성 시 스킵
+        if (!_agent.enabled || !_agent.isOnNavMesh) return;
+        
         NavMeshPath path = new NavMeshPath();
         Vector3 newDestination = Vector3.zero;
         bool needsJumpApproach = false;
@@ -275,10 +315,14 @@ public class Monster : MonoBehaviour
 
     #endregion
 
+
     #region 복귀 상태 (Comeback)
 
     private void Comeback()
     {
+        // 방어: Agent 비활성 시 스킵
+        if (!_agent.enabled || !_agent.isOnNavMesh) return;
+        
         float distanceToPlayer = Vector3.Distance(transform.position, _player.transform.position);
 
         if (distanceToPlayer <= _monsterStats.DetectDistance.Value)
@@ -301,38 +345,48 @@ public class Monster : MonoBehaviour
 
     #region 피격 / 사망
 
+    /// <summary>
+    /// 데미지 적용 시도. 무적이면 false 반환.
+    /// 
+    /// [흐름]
+    /// 1. 사망/무적 체크
+    /// 2. 데미지 적용
+    /// 3. 무적 타이머 시작
+    /// 4. 넉백 시작
+    /// 5. 애니메이션 재생
+    /// 6. 사망 체크
+    /// </summary>
     public bool TryTakeDamage(float damage)
     {
-        if (State == EMonsterState.Hit || State == EMonsterState.Death)
+        // 사망 상태면 완전 차단
+        if (State == EMonsterState.Death)
         {
             return false;
         }
 
+        // 무적 중이면 차단 (짧은 시간만)
+        if (IsInvincible)
+        {
+            return false;
+        }
+
+        // === 피격 처리 시작 ===
+        
+        // 1. 데미지 적용
         _monsterStats.Health.Decrease(damage);
-        // 점프 중 피격 시 공중 넉백 처리
-        bool wasJumping = State == EMonsterState.Jump && _jumpController != null && _jumpController.IsJumping;
-        if (wasJumping)
-        {
-            _verticalKnockbackVelocity = _jumpController.CancelJump();
-            _isAirborneKnockback = true;
-            _agent.updatePosition = true;
-            Debug.Log($"[Monster] 공중 피격 - 수직속도: {_verticalKnockbackVelocity:F2}");
-        }
-
-        _isKnockbackActive = true;  // 넉백 시작
-        _knockbackTimer = 0f;  // 타이머 초기화
-        _agent.enabled = false;  // Agent 완전 비활성화 (간섭 차단)
-
-        _knockbackVelocity = (transform.position - _player.transform.position).normalized 
-                            * _monsterStats.KnockbackForce.Value;
-
-        if (_monsterStats.Health.Value > 0)
-        {
-            Debug.Log($"상태 전환: {State} -> Hit");
-            State = EMonsterState.Hit;
-            StartCoroutine(Hit_Coroutine());
-        }
-        else
+        
+        // 2. 무적 타이머 시작 (연타 방지)
+        float invincibilityDuration = _monsterStats.InvincibilityDuration?.Value ?? DEFAULT_INVINCIBILITY;
+        _invincibilityTimer = invincibilityDuration;
+        
+        // 3. 넉백 시작 (기존 넉백 중이면 리셋)
+        StartKnockback();
+        
+        // 4. 애니메이션 재생 (매 피격마다)
+        _animator.SetTrigger("Hit");
+        
+        // 5. 사망 체크
+        if (_monsterStats.Health.Value <= 0)
         {
             Debug.Log($"상태 전환: {State} -> Death");
             State = EMonsterState.Death;
@@ -342,9 +396,42 @@ public class Monster : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 넉백 시작. 기존 넉백 중이면 리셋하고 새로 시작.
+    /// </summary>
+    private void StartKnockback()
+    {
+        // 점프 중 피격 시 공중 넉백 처리
+        bool wasJumping = State == EMonsterState.Jump && _jumpController != null && _jumpController.IsJumping;
+        if (wasJumping)
+        {
+            _verticalKnockbackVelocity = _jumpController.CancelJump();
+            _isAirborneKnockback = true;
+            _agent.updatePosition = true;
+            Debug.Log($"[Monster] 공중 피격 - 수직속도: {_verticalKnockbackVelocity:F2}");
+        }
+        
+        // 넉백 전 상태 저장 (첫 피격 시만)
+        if (!_isKnockbackActive)
+        {
+            _preKnockbackState = State;
+        }
+
+        // 넉백 활성화
+        _isKnockbackActive = true;
+        _knockbackTimer = 0f;
+        _agent.enabled = false;  // Agent 비활성화 (간섭 차단)
+
+        // 넉백 방향: 플레이어 반대 방향
+        _knockbackVelocity = (transform.position - _player.transform.position).normalized 
+                            * _monsterStats.KnockbackForce.Value;
+    }
+
+    /// <summary>
+    /// 넉백 물리 적용. Update에서 매 프레임 호출.
+    /// </summary>
     private void ApplyKnockBack()
     {
-        // 넉백 중 아니면 무시
         if (!_isKnockbackActive) return;
         
         // 공중 넉백 처리 (점프 중 피격)
@@ -357,43 +444,49 @@ public class Monster : MonoBehaviour
         // 넉백 타이머 증가
         _knockbackTimer += Time.deltaTime;
         
-        // 지상 넉백 완료 처리: 속도 감쇠 또는 타임아웃
-        bool knockbackFinished = _knockbackVelocity.sqrMagnitude < 0.01f || _knockbackTimer >= _monsterStats.KnockbackDuration.Value;
+        // 넉백 완료 조건: 속도 감쇠 완료 OR 타임아웃
+        bool knockbackFinished = _knockbackVelocity.sqrMagnitude < 0.01f 
+                                || _knockbackTimer >= _monsterStats.KnockbackDuration.Value;
+        
         if (knockbackFinished)
         {
-            _knockbackVelocity = Vector3.zero;
-            _isKnockbackActive = false;
-            
-            // NavMesh 위치 검증 후 Agent 복원 (끄임 방지)
-            Vector3 validPos = transform.position;
-            if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
-            {
-                validPos = hit.position;
-            }
-            else if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
-            {
-                validPos = hit.position;
-                Debug.LogWarning($"[Monster] 넉백 완료 - NavMesh 멀리 복귀: {hit.position}");
-            }
-            else
-            {
-                validPos = _defaultPosition;
-                Debug.LogWarning($"[Monster] 넉백 완료 - NavMesh 못 찾음, 기본 위치로 복귀");
-            }
-            
-            // 위치 설정 후 Agent 활성화
-            transform.position = validPos;
-            _agent.enabled = true;
-            _agent.Warp(validPos);
+            CompleteGroundKnockback();
             return;
         }
 
+        // 넉백 이동 적용
         _controller.Move(_knockbackVelocity * Time.deltaTime);
+        
+        // 속도 감쇠
         _knockbackVelocity = Vector3.Lerp(
             _knockbackVelocity,
             Vector3.zero,
             _monsterStats.KnockbackDecay.Value * Time.deltaTime
         );
+    }
+
+
+    /// <summary>
+    /// 지상 넉백 완료 처리. NavMesh 복구 + 상태 복귀.
+    /// </summary>
+    private void CompleteGroundKnockback()
+    {
+        _knockbackVelocity = Vector3.zero;
+        _isKnockbackActive = false;
+        
+        // NavMesh 위치 검증 후 Agent 복원
+        Vector3 validPos = FindValidNavMeshPosition(transform.position);
+        
+        transform.position = validPos;
+        _agent.enabled = true;
+        _agent.Warp(validPos);
+        
+        // 상태 복구: 사망이 아니면 Idle로 (Idle에서 Trace로 자연 전환)
+        if (State != EMonsterState.Death)
+        {
+            State = EMonsterState.Idle;
+            _jumpController?.ResetStuckDetection();
+        }
     }
 
     /// <summary>
@@ -405,7 +498,6 @@ public class Monster : MonoBehaviour
         _knockbackTimer += Time.deltaTime;
         if (_knockbackTimer >= _monsterStats.KnockbackDuration.Value)
         {
-            // 타임아웃: 강제 착지
             CompleteAirborneKnockback(transform.position);
             return;
         }
@@ -424,17 +516,17 @@ public class Monster : MonoBehaviour
             _monsterStats.KnockbackDecay.Value * Time.deltaTime
         );
         
-        // 착지 감지: 하강 중 + (지면 가까움 OR CharacterController 착지)
+        // 착지 감지: 하강 중에만
         if (_verticalKnockbackVelocity < 0)
         {
-            // 방법 1: Raycast
+            // Raycast 착지 감지
             if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out RaycastHit hit, 0.5f, _groundLayer))
             {
                 CompleteAirborneKnockback(hit.point);
                 return;
             }
             
-            // 방법 2: CharacterController.isGrounded
+            // CharacterController 착지 감지
             if (_controller.isGrounded)
             {
                 CompleteAirborneKnockback(transform.position);
@@ -444,7 +536,7 @@ public class Monster : MonoBehaviour
     }
 
     /// <summary>
-    /// 공중 넉백 착지 완료: NavMesh 복귀
+    /// 공중 넉백 착지 완료: NavMesh 복귀 + 상태 복구
     /// </summary>
     private void CompleteAirborneKnockback(Vector3 landingPoint)
     {
@@ -453,70 +545,81 @@ public class Monster : MonoBehaviour
         _verticalKnockbackVelocity = 0f;
         
         // NavMesh 위치 검증 후 Agent 활성화
-        Vector3 validPos = landingPoint;
-        if (NavMesh.SamplePosition(landingPoint, out NavMeshHit navHit, 2f, NavMesh.AllAreas))
-        {
-            validPos = navHit.position;
-        }
-        else if (NavMesh.SamplePosition(landingPoint, out navHit, 5f, NavMesh.AllAreas))
-        {
-            validPos = navHit.position;
-        }
-        else
-        {
-            validPos = _defaultPosition;
-        }
+        Vector3 validPos = FindValidNavMeshPosition(landingPoint);
         
-        // 위치 설정 후 Agent 활성화
         transform.position = validPos;
         _agent.enabled = true;
         _agent.Warp(validPos);
         
+        // 상태 복구
+        if (State != EMonsterState.Death)
+        {
+            State = EMonsterState.Idle;
+            _jumpController?.ResetStuckDetection();
+        }
+        
         Debug.Log($"[Monster] 공중 넉백 착지 - 위치: {transform.position}");
     }
 
-    private IEnumerator Hit_Coroutine()
+    /// <summary>
+    /// 유효한 NavMesh 위치 찾기. 못 찾으면 기본 위치 반환.
+    /// </summary>
+    private Vector3 FindValidNavMeshPosition(Vector3 targetPosition)
     {
-        _animator.SetTrigger("Hit");
-        // 최소 피격 시간 대기
-        yield return new WaitForSeconds(0.2f);
+        // 1차: 가까운 거리에서 탐색
+        if (NavMesh.SamplePosition(targetPosition, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
         
-        // 넉백 완료 대기 (끄임 방지)
-        yield return new WaitUntil(() => !_isKnockbackActive);
+        // 2차: 더 넓은 범위에서 탐색
+        if (NavMesh.SamplePosition(targetPosition, out hit, 5f, NavMesh.AllAreas))
+        {
+            Debug.LogWarning($"[Monster] NavMesh 복귀 - 확장 탐색: {hit.position}");
+            return hit.position;
+        }
         
-        _jumpController?.ResetStuckDetection();
-        _animator.SetTrigger("HitToIdle");
-        State = EMonsterState.Idle;
+        // 3차: 폴백 - 기본 위치
+        Debug.LogWarning($"[Monster] NavMesh 못 찾음 - 기본 위치로 복귀");
+        return _defaultPosition;
     }
 
+
+    /// <summary>
+    /// 사망 코루틴. 골드 드롭 + 파괴.
+    /// </summary>
+    private IEnumerator Death_Coroutine()
+    {
+        // 넉백 완료 대기 (죽으면서 밀려나는 연출)
+        yield return new WaitUntil(() => !_isKnockbackActive);
+        
+        // 사망 시 골드 드롭 시도
+        TryDropGold();
+        
+        yield return new WaitForSeconds(2f);
+        Destroy(gameObject);
+    }
+    
     /// <summary>
     /// 확률에 따라 골드 코인 드롭.
-    /// 여러 개 드랍 + 튀어오르는 효과.
     /// </summary>
     private void TryDropGold()
     {
-        // 프리팩 미설정 체크
         if (_goldCoinPrefab == null)
         {
             Debug.LogWarning("[Monster] 골드 프리팩이 설정되지 않았습니다.", this);
             return;
         }
         
-        // 확률 판정
         if (Random.value > _goldDropChance) return;
         
-        // 드랍 개수 결정 (min ~ max 랜덤)
         int dropCount = Random.Range(_goldDropCountMin, _goldDropCountMax + 1);
-        
-        // 드롭 위치 (몸 위치 + 약간 높이)
         Vector3 dropPosition = transform.position + Vector3.up * _goldDropHeight;
         
-        // 여러 개 생성
         for (int i = 0; i < dropCount; i++)
         {
             GameObject coin = SpawnGoldCoin(dropPosition);
             
-            // 튀어오르는 효과 적용
             if (coin != null && coin.TryGetComponent(out GoldCoin goldCoin))
             {
                 goldCoin.LaunchDrop();
@@ -527,7 +630,7 @@ public class Monster : MonoBehaviour
     }
     
     /// <summary>
-    /// 골드 코인 1개 생성. 풀링 우선, 없으면 Instantiate.
+    /// 골드 코인 1개 생성. 풀링 우선.
     /// </summary>
     private GameObject SpawnGoldCoin(Vector3 position)
     {
@@ -543,15 +646,6 @@ public class Monster : MonoBehaviour
         }
         
         return coin;
-    }
-
-    private IEnumerator Death_Coroutine()
-    {
-        // 사망 시 골드 드롭 시도
-        TryDropGold();
-        
-        yield return new WaitForSeconds(2f);
-        Destroy(gameObject);
     }
 
     #endregion
