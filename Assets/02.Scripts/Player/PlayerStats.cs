@@ -14,6 +14,15 @@ public class PlayerStats : MonoBehaviour
     public ValueStat RunSpeed;
     public ValueStat JumpPower;
 
+    [Header("재화")]
+    [SerializeField] private int _gold = 0;
+    
+    /// <summary>
+    /// 현재 보유 골드량 (읽기 전용)
+    /// </summary>
+    public int Gold => _gold;
+
+
 
     private void Start()
     {
@@ -40,7 +49,18 @@ public class PlayerStats : MonoBehaviour
         Debug.Log($"플레이어 피격! 남은 체력: {Health.Value}");
     }
 
-    private void Death()
+    
+    /// <summary>
+    /// 골드 추가. 획득 시스템에서 호출.
+    /// </summary>
+    public void AddGold(int amount)
+    {
+        if (amount <= 0) return;
+        
+        _gold += amount;
+        // TODO: UI 업데이트 이벤트 발행 가능
+    }
+private void Death()
     {
         GameManager.Instance.GameOver();
     }

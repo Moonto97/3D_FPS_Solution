@@ -25,6 +25,22 @@ public class Monster : MonoBehaviour
     [Header("점프 컨트롤러")]
     [SerializeField] private MonsterJumpController _jumpController;
     
+    [Header("골드 드롭")]
+    [SerializeField, Tooltip("골드 코인 프리팩")]
+    private GameObject _goldCoinPrefab;
+    
+    [SerializeField, Range(0f, 1f), Tooltip("골드 드롭 확률 (0~1)")]
+    private float _goldDropChance = 0.5f;
+    
+    [SerializeField, Tooltip("드롭 시 스폰되는 높이")]
+    private float _goldDropHeight = 1.5f;
+    
+    [SerializeField, Tooltip("드랍할 코인 최소 개수")]
+    private int _goldDropCountMin = 3;
+    
+    [SerializeField, Tooltip("드랍할 코인 최대 개수")]
+    private int _goldDropCountMax = 7;
+    
     [Header("지형 설정")]
     [SerializeField] private LayerMask _groundLayer;
     
@@ -473,8 +489,67 @@ public class Monster : MonoBehaviour
         State = EMonsterState.Idle;
     }
 
+    /// <summary>
+    /// 확률에 따라 골드 코인 드롭.
+    /// 여러 개 드랍 + 튀어오르는 효과.
+    /// </summary>
+    private void TryDropGold()
+    {
+        // 프리팩 미설정 체크
+        if (_goldCoinPrefab == null)
+        {
+            Debug.LogWarning("[Monster] 골드 프리팩이 설정되지 않았습니다.", this);
+            return;
+        }
+        
+        // 확률 판정
+        if (Random.value > _goldDropChance) return;
+        
+        // 드랍 개수 결정 (min ~ max 랜덤)
+        int dropCount = Random.Range(_goldDropCountMin, _goldDropCountMax + 1);
+        
+        // 드롭 위치 (몸 위치 + 약간 높이)
+        Vector3 dropPosition = transform.position + Vector3.up * _goldDropHeight;
+        
+        // 여러 개 생성
+        for (int i = 0; i < dropCount; i++)
+        {
+            GameObject coin = SpawnGoldCoin(dropPosition);
+            
+            // 튀어오르는 효과 적용
+            if (coin != null && coin.TryGetComponent(out GoldCoin goldCoin))
+            {
+                goldCoin.LaunchDrop();
+            }
+        }
+        
+        Debug.Log($"[Monster] {gameObject.name}이 골드 {dropCount}개를 드롭했습니다!");
+    }
+    
+    /// <summary>
+    /// 골드 코인 1개 생성. 풀링 우선, 없으면 Instantiate.
+    /// </summary>
+    private GameObject SpawnGoldCoin(Vector3 position)
+    {
+        GameObject coin;
+        
+        if (ObjectPoolManager.Instance != null && ObjectPoolManager.Instance.HasPool(GoldCoin.POOL_TAG))
+        {
+            coin = ObjectPoolManager.Instance.Spawn(GoldCoin.POOL_TAG, position, Quaternion.identity);
+        }
+        else
+        {
+            coin = Instantiate(_goldCoinPrefab, position, Quaternion.identity);
+        }
+        
+        return coin;
+    }
+
     private IEnumerator Death_Coroutine()
     {
+        // 사망 시 골드 드롭 시도
+        TryDropGold();
+        
         yield return new WaitForSeconds(2f);
         Destroy(gameObject);
     }

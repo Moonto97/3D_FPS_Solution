@@ -407,6 +407,11 @@ MonoBehaviour:
   _agent: {fileID: 1214171482781068861}
   _animator: {fileID: 3977633635055626316}
   _jumpController: {fileID: 3689506521930192219}
+  _goldCoinPrefab: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
+  _goldDropChance: 1
+  _goldDropHeight: 1.5
+  _goldDropCountMin: 3
+  _goldDropCountMax: 7
   _groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
