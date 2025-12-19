@@ -20,12 +20,15 @@ public class PlayerMove : MonoBehaviour
     private CharacterController _controller;
     private PlayerStats _stats;
     
+    private Animator _animator;
+    
     private float _yVelocity = 0f;   // 중력에 의해 누적될 y값 변수
     
     private void Awake()
     {
         _controller = GetComponent<CharacterController>();
         _stats = GetComponent<PlayerStats>();
+        _animator = GetComponentInChildren<Animator>();
     }
 
 private void Update()
@@ -50,6 +53,7 @@ private void Update()
         
         // - 글로벌 좌표 방향을 구한다. 
         Vector3 direction = new Vector3(x, 0, y);
+        _animator.SetFloat("Speed", direction.magnitude);
         direction.Normalize();
 
         

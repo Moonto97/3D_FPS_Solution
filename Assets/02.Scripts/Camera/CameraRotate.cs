@@ -39,7 +39,6 @@ public class CameraRotate : MonoBehaviour
 
     /// <summary>
     /// 수직 회전값 추가 (양수 = 아래로, 음수 = 위로)
-    /// 반동 시스템에서 카메라를 위로 튕길 때 사용
     /// </summary>
     public void AddVerticalRotation(float amount)
     {
@@ -49,7 +48,6 @@ public class CameraRotate : MonoBehaviour
 
     /// <summary>
     /// 수평 회전값 추가
-    /// 반동 시스템에서 좌우 흔들림에 사용
     /// </summary>
     public void AddHorizontalRotation(float amount)
     {
