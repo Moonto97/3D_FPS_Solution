@@ -9,74 +9,90 @@ using UnityEngine;
 /// </summary>
 public class PlayerGunFire : MonoBehaviour
 {
-    [Header("Gun Data (ScriptableObject)")]
+    #region ========== Inspector Fields ==========
+
+    [Header("=== Data ===")]
     [Tooltip("총기 데이터. 없으면 기본값 사용")]
     [SerializeField] private GunData _gunData;
 
-    [Header("Fire Settings")]
+    [Header("=== Fire ===")]
     [SerializeField] private Transform _fireTransform;
     [SerializeField] private float _damage = 10f;
+    [SerializeField] private Animator _animator;
 
-    [Header("Recoil (자동 탐색)")]
+    [Header("=== Recoil ===")]
     [Tooltip("null이면 Main Camera에서 자동 탐색")]
     [SerializeField] private CameraRecoil _cameraRecoil;
 
-    [Header("Muzzle Flash")]
+    [Header("=== Muzzle Flash ===")]
     [Tooltip("총구 화염 프리팹 (Easy FPS MuzzelFlash 폴더에서 선택)")]
     [SerializeField] private GameObject _muzzleFlashPrefab;
-
     [Tooltip("총구 화염 생성 위치 (총구 끝)")]
     [SerializeField] private Transform _muzzleFlashSpawnPoint;
 
-    
-[Header("Hit Effect (Pool)")]
+    [Header("=== Hit Effect (Pool) ===")]
     [SerializeField] private GameObject _hitEffectPrefab;
     [SerializeField] private string _hitEffectPoolTag = "HitEffect";
     [SerializeField] private int _poolInitialSize = 10;
     [SerializeField] private float _effectDuration = 2f;
-    
-    [SerializeField] private Animator _animator;
 
-    // === 탄약 상태 (런타임) ===
-    private int _currentAmmo;      // 현재 탄창의 탄약
-    private int _reserveAmmo;      // 예비 탄약
-    private bool _isReloading;     // 재장전 중 여부
-    private float _nextFireTime;   // 다음 발사 가능 시간
+    #endregion
 
-    // === 발사 모드 ===
+    #region ========== Constants ==========
+
+    // GunData 없을 때 사용하는 폴백 값
+    private const int DEFAULT_MAGAZINE_SIZE = 30;
+    private const int DEFAULT_RESERVE_AMMO = 120;
+    private const float DEFAULT_RELOAD_TIME = 1.6f;
+    private const float DEFAULT_FIRE_RATE = 0.1f;
+    private const int BURST_COUNT = 3;  // 3점사
+
+    #endregion
+
+    #region ========== Runtime State ==========
+
+    // 탄약 상태
+    private int _currentAmmo;       // 현재 탄창의 탄약
+    private int _reserveAmmo;       // 예비 탄약
+    private bool _isReloading;      // 재장전 중 여부
+    private float _nextFireTime;    // 다음 발사 가능 시간
+
+    // 발사 모드 상태
     private EFireMode _currentFireMode = EFireMode.Auto;
-    private int _burstShotsRemaining;       // 점사 모드에서 남은 발사 수
-    private bool _isBurstFiring;            // 점사 중 여부
-    private const int BURST_COUNT = 3;      // 3점사
+    private int _burstShotsRemaining;   // 점사 모드에서 남은 발사 수
+    private bool _isBurstFiring;        // 점사 중 여부
 
-    // === 이벤트: UI 연동용 ===
-    // Action<현재탄약, 예비탄약>: UI가 이 이벤트를 구독해서 탄약 수 업데이트
+    // 풀 상태
+    private bool _isPoolInitialized;
+
+    #endregion
+
+    #region ========== Events (UI 연동용) ==========
+
+    /// <summary>현재탄약, 예비탄약이 변경될 때</summary>
     public event Action<int, int> OnAmmoChanged;
-    
-    // Action<진행률(0~1)>: 재장전 진행바 업데이트용
+
+    /// <summary>재장전 진행률(0~1) 업데이트</summary>
     public event Action<float> OnReloadProgress;
-    
-    // Action<bool>: 재장전 시작/종료 알림
+
+    /// <summary>재장전 시작(true)/종료(false)</summary>
     public event Action<bool> OnReloadStateChanged;
-    
-    // Action<EFireMode>: 발사 모드 변경 알림 (UI 표시용)
+
+    /// <summary>발사 모드 변경 시</summary>
     public event Action<EFireMode> OnFireModeChanged;
 
-    // === 외부에서 읽기용 프로퍼티 ===
+    #endregion
+
+    #region ========== Properties (외부 읽기용) ==========
+
     public int CurrentAmmo => _currentAmmo;
     public int ReserveAmmo => _reserveAmmo;
     public bool IsReloading => _isReloading;
     public EFireMode CurrentFireMode => _currentFireMode;
 
-    private bool _isPoolInitialized = false;
+    #endregion
 
-    
-
-    // === 기본값 (GunData 없을 때 폴백) ===
-    private const int DEFAULT_MAGAZINE_SIZE = 30;
-    private const int DEFAULT_RESERVE_AMMO = 120;
-    private const float DEFAULT_RELOAD_TIME = 1.6f;
-    private const float DEFAULT_FIRE_RATE = 0.1f;
+    #region ========== Initialization ==========
 
     private void Start()
     {
@@ -86,7 +102,7 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 탄약 초기화 (게임 시작 시)
+    /// 탄약 초기화 + UI에 초기 상태 전달
     /// </summary>
     private void InitializeAmmo()
     {
@@ -109,7 +125,7 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 반동 시스템 초기화 (자동 탐색)
+    /// 반동 컴포넌트 자동 탐색 (Inspector에서 할당 안 했을 때)
     /// </summary>
     private void InitializeRecoil()
     {
@@ -129,7 +145,7 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 히트 이펙트 풀 초기화
+    /// 히트 이펙트 오브젝트 풀 생성
     /// </summary>
     private void InitializeHitEffectPool()
     {
@@ -147,8 +163,13 @@ public class PlayerGunFire : MonoBehaviour
         _isPoolInitialized = true;
     }
 
+    #endregion
+
+    #region ========== Update & Input ==========
+
     private void Update()
     {
+        // 게임 상태 체크: Playing이 아니면 입력 무시
         if (GameManager.Instance.State != EGameState.Playing) return;
 
         HandleFireModeInput();
@@ -157,25 +178,76 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 발사 모드 전환 입력 처리 (B키)
-    /// Auto → Single → Burst → Auto 순환
+    /// 발사 모드 전환 (B키): Auto → Single → Burst → Auto
     /// </summary>
     private void HandleFireModeInput()
     {
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            // 점사 중에는 모드 변경 불가
-            if (_isBurstFiring) return;
-            
-            // 재장전 중에는 모드 변경 불가
-            if (_isReloading) return;
+        if (!Input.GetKeyDown(KeyCode.B)) return;
+        if (_isBurstFiring || _isReloading) return;  // 점사/재장전 중 변경 불가
 
-            CycleFireMode();
+        CycleFireMode();
+    }
+
+    /// <summary>
+    /// 발사 입력 처리 (마우스 좌클릭)
+    /// </summary>
+private void HandleFireInput()
+    {
+        switch (_currentFireMode)
+        {
+            case EFireMode.Auto:
+                // 연사: 홀드 중 계속 발사
+                if (Input.GetMouseButton(0))
+                {
+                    TryFire();
+                }
+                else
+                {
+                    // 마우스 떼면 발사 애니메이션 종료
+                    _animator.SetBool("Fire", false);
+                }
+                break;
+
+            case EFireMode.Single:
+                // 단발: 클릭당 1발
+                if (Input.GetMouseButtonDown(0))
+                {
+                    TryFire();
+                }
+                else if (!Input.GetMouseButton(0))
+                {
+                    // 마우스 안 누르면 애니메이션 종료
+                    _animator.SetBool("Fire", false);
+                }
+                break;
+
+            case EFireMode.Burst:
+                // 점사: 클릭당 3발 연속
+                if (Input.GetMouseButtonDown(0) && !_isBurstFiring)
+                {
+                    StartCoroutine(BurstFireCoroutine());
+                }
+                break;
         }
     }
 
     /// <summary>
-    /// 발사 모드 순환 (Auto → Single → Burst → Auto)
+    /// 재장전 입력 (R키)
+    /// </summary>
+    private void HandleReloadInput()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            TryReload();
+        }
+    }
+
+    #endregion
+
+    #region ========== Fire System ==========
+
+    /// <summary>
+    /// 발사 모드 순환: Auto → Single → Burst → Auto
     /// </summary>
     private void CycleFireMode()
     {
@@ -188,103 +260,18 @@ public class PlayerGunFire : MonoBehaviour
         };
 
         OnFireModeChanged?.Invoke(_currentFireMode);
-        Debug.Log($"[PlayerGunFire] Fire mode changed to: {_currentFireMode}");
+        Debug.Log($"[PlayerGunFire] Fire mode: {_currentFireMode}");
     }
 
     /// <summary>
-    /// 발사 입력 처리 (발사 모드에 따라 분기)
-    /// </summary>
-    private void HandleFireInput()
-    {
-        switch (_currentFireMode)
-        {
-            case EFireMode.Auto:
-                // 연사: 홀드 중 계속 발사
-                if (Input.GetMouseButton(0))
-                {
-                    TryFire();
-                }
-                break;
-
-            case EFireMode.Single:
-                // 단발: 클릭 시 1발만 발사
-                if (Input.GetMouseButtonDown(0))
-                {
-                    TryFire();
-                }
-                break;
-
-            case EFireMode.Burst:
-                // 점사: 클릭 시 3발 연속 발사
-                if (Input.GetMouseButtonDown(0) && !_isBurstFiring)
-                {
-                    StartCoroutine(BurstFireCoroutine());
-                }
-                break;
-        }
-    }
-
-    /// <summary>
-    /// 점사 발사 코루틴 (3발 연속 발사)
-    /// </summary>
-    private IEnumerator BurstFireCoroutine()
-    {
-        _isBurstFiring = true;
-        _burstShotsRemaining = BURST_COUNT;
-
-        float fireRate = _gunData != null ? _gunData.FireRate : DEFAULT_FIRE_RATE;
-
-        while (_burstShotsRemaining > 0)
-        {
-            // 재장전 중이면 점사 중단
-            if (_isReloading)
-            {
-                break;
-            }
-
-            // 탄약 없으면 점사 중단 + 재장전 시도
-            if (_currentAmmo <= 0)
-            {
-                TryReload();
-                break;
-            }
-
-            Fire();
-            _burstShotsRemaining--;
-
-            // 남은 발사가 있으면 연사 속도만큼 대기
-            if (_burstShotsRemaining > 0)
-            {
-                yield return new WaitForSeconds(fireRate);
-            }
-        }
-
-        _isBurstFiring = false;
-    }
-
-    /// <summary>
-    /// 재장전 입력 처리 (R키)
-    /// </summary>
-    private void HandleReloadInput()
-    {
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            TryReload();
-        }
-    }
-
-    /// <summary>
-    /// 발사 시도 (조건 체크 후 실행)
+    /// 발사 시도 (조건 체크)
     /// </summary>
     private void TryFire()
     {
-        // 재장전 중이면 발사 불가
-        if (_isReloading) return;
+        if (_isReloading) return;                   // 재장전 중 발사 불가
+        if (Time.time < _nextFireTime) return;      // 연사 쿨다운 중
 
-        // 연사 속도 제한 (아직 쿨다운 중이면 발사 불가)
-        if (Time.time < _nextFireTime) return;
-
-        // 탄약 없으면 발사 불가 + 자동 재장전 시도
+        // 탄약 없으면 자동 재장전
         if (_currentAmmo <= 0)
         {
             TryReload();
@@ -295,28 +282,30 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 실제 총 발사 처리
+    /// 실제 발사 실행
     /// </summary>
-    private void Fire()
+private void Fire()
     {
-        _animator.SetTrigger("AttackTrigger");
+        // 발사 애니메이션: 매 발사마다 처음부터 재생
+        _animator.SetBool("Fire", true);
+        _animator.Play("Fire", 1, 0f);  // Layer 1 = Fire Layer
 
-        // 총구 화염 재생
+        // 시각 효과
         PlayMuzzleFlash();
-        // 탄약 소모
+
+        // 탄약 소모 + UI 알림
         _currentAmmo--;
         OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
 
-        // 다음 발사 시간 설정 (연사 속도)
+        // 다음 발사 쿨다운 설정
         float fireRate = _gunData != null ? _gunData.FireRate : DEFAULT_FIRE_RATE;
         _nextFireTime = Time.time + fireRate;
 
-        // 반동 적용
+        // 반동
         ApplyRecoil();
 
-        // Ray 발사 (카메라 방향으로)
+        // 레이캐스트 (카메라 중앙 → 전방)
         Ray ray = new Ray(_fireTransform.position, Camera.main.transform.forward);
-
         if (Physics.Raycast(ray, out RaycastHit hitInfo))
         {
             PlayHitEffect(hitInfo.point, hitInfo.normal);
@@ -325,32 +314,84 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 재장전 시도 (조건 체크 후 시작)
+    /// 점사 코루틴: 3발을 연사 속도로 연속 발사
     /// </summary>
-    private void TryReload()
+private IEnumerator BurstFireCoroutine()
     {
-        // 이미 재장전 중이면 무시
-        if (_isReloading) return;
+        _isBurstFiring = true;
+        _burstShotsRemaining = BURST_COUNT;
+
+        float fireRate = _gunData != null ? _gunData.FireRate : DEFAULT_FIRE_RATE;
+
+        while (_burstShotsRemaining > 0)
+        {
+            // 재장전 시작되면 점사 중단
+            if (_isReloading) break;
+
+            // 탄약 소진 시 재장전 후 중단
+            if (_currentAmmo <= 0)
+            {
+                TryReload();
+                break;
+            }
+
+            Fire();
+            _burstShotsRemaining--;
+
+            // 다음 발사까지 대기
+            if (_burstShotsRemaining > 0)
+            {
+                yield return new WaitForSeconds(fireRate);
+            }
+        }
+
+        // 점사 종료 시 애니메이션 종료
+        _animator.SetBool("Fire", false);
+        _isBurstFiring = false;
+    }
+
+    /// <summary>
+    /// 피격 대상에게 데미지 전달
+    /// </summary>
+    private void ProcessDamage(RaycastHit hitInfo)
+    {
+        Monster monster = hitInfo.collider.GetComponent<Monster>();
+        if (monster != null)
+        {
+            monster.TryTakeDamage(_damage);
+        }
+    }
+
+    #endregion
+
+    #region ========== Reload System ==========
+
+    /// <summary>
+    /// 재장전 시도 (조건 체크)
+    /// </summary>
+private void TryReload()
+    {
+        if (_isReloading) return;  // 이미 재장전 중
 
         int magazineSize = _gunData != null ? _gunData.MagazineSize : DEFAULT_MAGAZINE_SIZE;
+        if (_currentAmmo >= magazineSize) return;  // 탄창 가득 참
 
-        // 탄창이 이미 가득 찼으면 재장전 불필요
-        if (_currentAmmo >= magazineSize) return;
-
-        // 예비 탄약 없으면 재장전 불가
         if (_reserveAmmo <= 0)
         {
             Debug.Log("[PlayerGunFire] No reserve ammo!");
             return;
         }
 
+        // 재장전 시작 시 발사 애니메이션 종료
+        _animator.SetBool("Fire", false);
+
         StartCoroutine(ReloadCoroutine());
     }
 
     /// <summary>
-    /// 재장전 코루틴 (시간 경과 + UI 업데이트)
-    /// 코루틴: Unity에서 시간에 걸친 작업을 처리하는 방법
-    /// yield return으로 프레임마다 실행을 일시정지했다 재개
+    /// 재장전 코루틴
+    /// - 코루틴: 여러 프레임에 걸쳐 실행되는 함수
+    /// - yield return null: 다음 프레임까지 대기
     /// </summary>
     private IEnumerator ReloadCoroutine()
     {
@@ -360,14 +401,14 @@ public class PlayerGunFire : MonoBehaviour
         float reloadTime = _gunData != null ? _gunData.ReloadTime : DEFAULT_RELOAD_TIME;
         float elapsedTime = 0f;
 
-        // 재장전 진행 (매 프레임 진행률 업데이트)
+        // 매 프레임 진행률 업데이트 (UI 프로그레스 바용)
         while (elapsedTime < reloadTime)
         {
             elapsedTime += Time.deltaTime;
             float progress = Mathf.Clamp01(elapsedTime / reloadTime);
             OnReloadProgress?.Invoke(progress);
-            
-            yield return null; // 다음 프레임까지 대기
+
+            yield return null;
         }
 
         CompleteReload();
@@ -377,16 +418,16 @@ public class PlayerGunFire : MonoBehaviour
     }
 
     /// <summary>
-    /// 재장전 완료 처리 (탄약 이동 계산)
+    /// 재장전 완료: 예비 탄약 → 탄창으로 이동
     /// </summary>
     private void CompleteReload()
     {
         int magazineSize = _gunData != null ? _gunData.MagazineSize : DEFAULT_MAGAZINE_SIZE;
 
-        // 필요한 탄약 수 = 탄창 최대 - 현재 탄약
+        // 필요량 = 탄창 최대 - 현재 보유
         int ammoNeeded = magazineSize - _currentAmmo;
 
-        // 실제로 채울 수 있는 탄약 = min(필요량, 보유량)
+        // 실제 충전량 = min(필요량, 예비 보유량)
         int ammoToLoad = Mathf.Min(ammoNeeded, _reserveAmmo);
 
         _currentAmmo += ammoToLoad;
@@ -395,16 +436,13 @@ public class PlayerGunFire : MonoBehaviour
         OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
     }
 
-    /// <summary>
-    /// 외부에서 탄약 추가 (탄약 픽업 등)
-    /// </summary>
-    public void AddReserveAmmo(int amount)
-    {
-        int maxReserve = _gunData != null ? _gunData.MaxReserveAmmo : DEFAULT_RESERVE_AMMO * 2;
-        _reserveAmmo = Mathf.Min(_reserveAmmo + amount, maxReserve);
-        OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
-    }
+    #endregion
 
+    #region ========== Effects ==========
+
+    /// <summary>
+    /// 반동 적용 (CameraRecoil에 위임)
+    /// </summary>
     private void ApplyRecoil()
     {
         if (_cameraRecoil != null)
@@ -413,14 +451,34 @@ public class PlayerGunFire : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 총구 화염 생성 (프리팹 Instantiate)
+    /// - 프리팹 내 DestroyAfterTimeParticle이 자동 파괴 처리
+    /// </summary>
+    private void PlayMuzzleFlash()
+    {
+        if (_muzzleFlashPrefab == null || _muzzleFlashSpawnPoint == null) return;
+
+        // Z축 랜덤 회전으로 시각적 변화
+        float randomZ = UnityEngine.Random.Range(0f, 360f);
+        Quaternion rotation = _muzzleFlashSpawnPoint.rotation * Quaternion.Euler(0f, 0f, randomZ);
+
+        GameObject flash = Instantiate(_muzzleFlashPrefab, _muzzleFlashSpawnPoint.position, rotation);
+        flash.transform.SetParent(_muzzleFlashSpawnPoint);
+    }
+
+    /// <summary>
+    /// 피격 이펙트 재생 (오브젝트 풀 사용)
+    /// </summary>
     private void PlayHitEffect(Vector3 position, Vector3 normal)
     {
         if (!_isPoolInitialized) return;
 
+        // 풀에서 꺼내서 위치/회전 설정
         GameObject effect = ObjectPoolManager.Instance.Spawn(
             _hitEffectPoolTag,
             position,
-            Quaternion.LookRotation(normal)
+            Quaternion.LookRotation(normal)  // 표면 법선 방향으로 회전
         );
 
         if (effect != null)
@@ -431,34 +489,24 @@ public class PlayerGunFire : MonoBehaviour
                 particle.Play();
             }
 
+            // 일정 시간 후 풀로 반환
             ObjectPoolManager.Instance.Despawn(_hitEffectPoolTag, effect, _effectDuration);
         }
     }
 
-    private void ProcessDamage(RaycastHit hitInfo)
-    {
-        Monster monster = hitInfo.collider.GetComponent<Monster>();
-        if (monster != null)
-        {
-            monster.TryTakeDamage(_damage);
-        }
-    }
+    #endregion
+
+    #region ========== Public API ==========
 
     /// <summary>
-    /// 총구 화염 재생 (Instantiate 방식 - 프리팹이 자동 파괴됨)
+    /// 예비 탄약 추가 (탄약 픽업 등 외부에서 호출)
     /// </summary>
-    private void PlayMuzzleFlash()
+    public void AddReserveAmmo(int amount)
     {
-        if (_muzzleFlashPrefab == null || _muzzleFlashSpawnPoint == null) return;
-
-        // 랜덤 Z축 회전으로 단조로움 방지
-        Quaternion rotation = _muzzleFlashSpawnPoint.rotation * Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
-        
-        // 프리팹 생성 (DestroyAfterTimeParticle이 자동으로 파괴함)
-        GameObject flash = Instantiate(_muzzleFlashPrefab, _muzzleFlashSpawnPoint.position, rotation);
-        flash.transform.SetParent(_muzzleFlashSpawnPoint);
+        int maxReserve = _gunData != null ? _gunData.MaxReserveAmmo : DEFAULT_RESERVE_AMMO * 2;
+        _reserveAmmo = Mathf.Min(_reserveAmmo + amount, maxReserve);
+        OnAmmoChanged?.Invoke(_currentAmmo, _reserveAmmo);
     }
 
-    
-
+    #endregion
 }
