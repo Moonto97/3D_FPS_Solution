@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 // 플레이어의 '스탯'을 관리하는 컴포넌트
@@ -6,6 +7,9 @@ public class PlayerStats : MonoBehaviour
     // 고민해볼 거리
     // 1. 옵저버 패턴은 어떻게 해야지?
     // 2. ConsumableStat의 Regenerate는 PlayerStats에서만 호출 가능하게 하고 싶다. 다른 속성/기능은 다른 클래스에서 사용할 수 있다.
+    
+    // 이벤트: 피격 시 UI(피 화면 효과 등)에 알림
+    public event Action OnDamaged;
     
     public ConsumableStat Health;
     public ConsumableStat Stamina;
@@ -47,6 +51,9 @@ public class PlayerStats : MonoBehaviour
     {
         Health.Decrease(damage);
         Debug.Log($"플레이어 피격! 남은 체력: {Health.Value}");
+        
+        // 피격 이벤트 발행 → UI_DamageEffect 등이 구독
+        OnDamaged?.Invoke();
     }
 
     

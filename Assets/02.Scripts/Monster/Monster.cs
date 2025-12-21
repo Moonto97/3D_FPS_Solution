@@ -98,7 +98,7 @@ public class Monster : MonoBehaviour
     {
         if (_animator == null)
         {
-            _animator = GetComponent<Animator>();
+            _animator = GetComponentInChildren<Animator>();
         }
     }
     
@@ -485,6 +485,7 @@ public class Monster : MonoBehaviour
         if (State != EMonsterState.Death)
         {
             State = EMonsterState.Idle;
+            _animator.SetTrigger("HitToIdle");  // Animator도 Idle로 복귀
             _jumpController?.ResetStuckDetection();
         }
     }
@@ -555,6 +556,7 @@ public class Monster : MonoBehaviour
         if (State != EMonsterState.Death)
         {
             State = EMonsterState.Idle;
+            _animator.SetTrigger("HitToIdle");  // Animator도 Idle로 복귀
             _jumpController?.ResetStuckDetection();
         }
         
