@@ -75,6 +75,25 @@ public class Monster : MonoBehaviour
     
     #endregion
 
+    #region 순찰 상태
+    
+    // 현재 순찰 목표 지점
+    private Vector3 _patrolTarget;
+    
+    // 포인트 도착 후 대기 타이머
+    private float _patrolWaitTimer;
+    
+    // 대기 중 여부
+    private bool _isWaitingAtPatrolPoint;
+    
+    // 도착 판정 거리
+    private const float PATROL_ARRIVAL_THRESHOLD = 0.5f;
+    
+    // NavMesh 샘플링 최대 시도 횟수
+    private const int MAX_PATROL_SAMPLE_ATTEMPTS = 10;
+    
+    #endregion
+
     #region Properties
     
     /// <summary>무적 상태 여부. UI나 디버그용.</summary>
@@ -89,6 +108,8 @@ public class Monster : MonoBehaviour
     
     public Vector3 CurrentDestination => _currentDestination;
     public MonsterJumpController JumpController => _jumpController;
+    public Vector3 DefaultPosition => _defaultPosition;
+    public Vector3 PatrolTarget => _patrolTarget;
     
     #endregion
 
@@ -102,11 +123,10 @@ public class Monster : MonoBehaviour
         }
     }
     
-    private void Start()
+private void Start()
     {
         _defaultPosition = transform.position;
         _agent.speed = _monsterStats.MoveSpeed.Value;
-        _agent.stoppingDistance = _monsterStats.AttackDistance.Value;
         
         // 점프 컨트롤러 초기화
         if (_jumpController == null)
@@ -129,6 +149,12 @@ public class Monster : MonoBehaviour
         {
             Debug.LogError($"[Monster] {gameObject.name}이 NavMesh 위에 없습니다!", this);
         }
+        
+        // 순찰 상태로 시작 (EnterPatrolState로 초기화 통일)
+        EnterPatrolState();
+        
+        // Patrol도 Trace 애니메이션 사용 (움직이는 모션)
+        _animator.SetTrigger("IdleToTrace");
     }
 
     private void OnDestroy()
@@ -180,6 +206,9 @@ public class Monster : MonoBehaviour
             case EMonsterState.Idle:
                 Idle();
                 break;
+            case EMonsterState.Patrol:
+                Patrol();
+                break;
             case EMonsterState.Trace:
                 Trace();
                 break;
@@ -219,6 +248,139 @@ public class Monster : MonoBehaviour
             Debug.Log($"상태 전환: Idle -> Trace");
         }
     }
+
+    #endregion
+
+    #region 순찰 상태 (Patrol)
+
+    /// <summary>
+    /// 순찰 상태: 랜덤 지점을 느린 속도로 이동.
+    /// 플레이어 감지 시 추격으로 전환.
+    /// </summary>
+private void Patrol()
+    {
+        // 방어: Agent 비활성 시 스킵
+        if (!_agent.enabled || !_agent.isOnNavMesh) return;
+        
+        // 1순위: 플레이어 감지 → Trace 전이
+        float distanceToPlayer = Vector3.Distance(transform.position, _player.transform.position);
+        if (distanceToPlayer <= _monsterStats.DetectDistance.Value)
+        {
+            TransitionToTrace();
+            return;
+        }
+        
+        // 2. 대기 중이면 타이머 처리
+        if (_isWaitingAtPatrolPoint)
+        {
+            HandlePatrolWait();
+            return;
+        }
+        
+        // 3. 이동 중 - 도착 체크 (NavMesh 경로 기준)
+        bool hasReachedDestination = !_agent.pathPending && 
+                                     (_agent.remainingDistance <= PATROL_ARRIVAL_THRESHOLD || 
+                                      !_agent.hasPath);
+        
+        if (hasReachedDestination && _currentDestination != Vector3.zero)
+        {
+            // 도착 → 대기 시작
+            _isWaitingAtPatrolPoint = true;
+            _patrolWaitTimer = _monsterStats.PatrolWaitTime.Value;
+            _agent.ResetPath();
+            return;
+        }
+        
+        // 4. 목표 지점으로 이동
+        if (_currentDestination != _patrolTarget)
+        {
+            _currentDestination = _patrolTarget;
+            _agent.SetDestination(_patrolTarget);
+            _agent.speed = _monsterStats.MoveSpeed.Value;
+        }
+    }
+
+    /// <summary>
+    /// 순찰 포인트 대기 처리. 타이머 완료 시 새 목표 설정.
+    /// </summary>
+private void HandlePatrolWait()
+    {
+        _patrolWaitTimer -= Time.deltaTime;
+        
+        if (_patrolWaitTimer <= 0f)
+        {
+            // 대기 완료 → 새 순찰 목표 설정 + 즉시 이동 시작
+            _isWaitingAtPatrolPoint = false;
+            _patrolTarget = GetRandomPatrolPoint();
+            _currentDestination = _patrolTarget;
+            _agent.SetDestination(_patrolTarget);
+        }
+    }
+
+    /// <summary>
+    /// 순찰 → 추격 전환. 속도 변경 + 상태 전이.
+    /// </summary>
+/// <summary>
+    /// Patrol 상태 진입 시 필요한 초기화 수행.
+    /// </summary>
+    private void EnterPatrolState()
+    {
+        State = EMonsterState.Patrol;
+        _patrolTarget = GetRandomPatrolPoint();
+        _agent.speed = _monsterStats.MoveSpeed.Value;
+        _agent.stoppingDistance = 0.1f;
+        
+        // 순찰 상태 초기화 (이전 상태 잔여값 제거)
+        _isWaitingAtPatrolPoint = false;
+        _currentDestination = Vector3.zero;  // 새 목표로 이동하도록 리셋
+    }
+
+    
+private void TransitionToTrace()
+    {
+        State = EMonsterState.Trace;
+        _agent.speed = _monsterStats.MoveSpeed.Value;
+        _isWaitingAtPatrolPoint = false;
+        // Patrol도 Trace 애니메이션 사용 중이므로 트리거 호출 불필요
+        Debug.Log($"상태 전환: Patrol -> Trace");
+    }
+
+    /// <summary>
+    /// 랜덤 순찰 지점 생성. NavMesh 유효성 검증 포함.
+    /// </summary>
+    /// <returns>유효한 NavMesh 위치. 실패 시 기본 위치 반환.</returns>
+private Vector3 GetRandomPatrolPoint()
+    {
+        float radius = _monsterStats.PatrolRadius.Value;
+        const float MIN_DISTANCE_FROM_CURRENT = 2f;  // 현재 위치에서 최소 2m 이상
+        
+        for (int i = 0; i < MAX_PATROL_SAMPLE_ATTEMPTS; i++)
+        {
+            // XZ 평면에서 랜덤 방향 + 랜덤 거리
+            Vector2 randomCircle = Random.insideUnitCircle * radius;
+            Vector3 randomPoint = _defaultPosition + new Vector3(randomCircle.x, 0f, randomCircle.y);
+            
+            // 현재 위치와 최소 거리 체크 (너무 가까우면 재시도)
+            if (Vector3.Distance(transform.position, randomPoint) < MIN_DISTANCE_FROM_CURRENT)
+            {
+                continue;
+            }
+            
+            // NavMesh 유효성 검증
+            if (NavMesh.SamplePosition(randomPoint, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+        }
+        
+        // 실패 시 기본 위치로 폴백
+        Debug.LogWarning($"[Monster] 순찰 지점 샘플링 실패 - 기본 위치로 복귀");
+        return _defaultPosition;
+    }
+
+    #endregion
+
+    #region 공격 상태 (Attack)
 
     private void Attack()
     {
@@ -318,7 +480,7 @@ public class Monster : MonoBehaviour
 
     #region 복귀 상태 (Comeback)
 
-    private void Comeback()
+private void Comeback()
     {
         // 방어: Agent 비활성 시 스킵
         if (!_agent.enabled || !_agent.isOnNavMesh) return;
@@ -332,12 +494,15 @@ public class Monster : MonoBehaviour
             return;
         }
 
+        // 복귀 시 stoppingDistance를 작게 설정
+        _agent.stoppingDistance = 0.1f;
         _agent.SetDestination(_defaultPosition);
 
         if (Vector3.Distance(transform.position, _defaultPosition) < 0.5f)
         {
-            State = EMonsterState.Idle;
-            Debug.Log($"상태 전환: Comeback -> Idle");
+            // 복귀 완료 → 순찰로 전환 (초기화 포함)
+            EnterPatrolState();
+            Debug.Log($"상태 전환: Comeback -> Patrol");
         }
     }
 
@@ -469,7 +634,7 @@ public class Monster : MonoBehaviour
     /// <summary>
     /// 지상 넉백 완료 처리. NavMesh 복구 + 상태 복귀.
     /// </summary>
-    private void CompleteGroundKnockback()
+private void CompleteGroundKnockback()
     {
         _knockbackVelocity = Vector3.zero;
         _isKnockbackActive = false;
@@ -481,11 +646,15 @@ public class Monster : MonoBehaviour
         _agent.enabled = true;
         _agent.Warp(validPos);
         
-        // 상태 복구: 사망이 아니면 Idle로 (Idle에서 Trace로 자연 전환)
+        // 상태 복구: 사망이 아니면 순찰로 전환
         if (State != EMonsterState.Death)
         {
-            State = EMonsterState.Idle;
-            _animator.SetTrigger("HitToIdle");  // Animator도 Idle로 복귀
+            EnterPatrolState();
+            
+            // Hit → Idle → Trace 애니메이션 전환
+            _animator.SetTrigger("HitToIdle");
+            _animator.SetTrigger("IdleToTrace");
+            
             _jumpController?.ResetStuckDetection();
         }
     }
@@ -539,7 +708,7 @@ public class Monster : MonoBehaviour
     /// <summary>
     /// 공중 넉백 착지 완료: NavMesh 복귀 + 상태 복구
     /// </summary>
-    private void CompleteAirborneKnockback(Vector3 landingPoint)
+private void CompleteAirborneKnockback(Vector3 landingPoint)
     {
         _isAirborneKnockback = false;
         _isKnockbackActive = false;
@@ -552,15 +721,19 @@ public class Monster : MonoBehaviour
         _agent.enabled = true;
         _agent.Warp(validPos);
         
-        // 상태 복구
+        // 상태 복구: 사망이 아니면 순찰로 전환
         if (State != EMonsterState.Death)
         {
-            State = EMonsterState.Idle;
-            _animator.SetTrigger("HitToIdle");  // Animator도 Idle로 복귀
+            EnterPatrolState();
+            
+            // Hit → Idle → Trace 애니메이션 전환
+            _animator.SetTrigger("HitToIdle");
+            _animator.SetTrigger("IdleToTrace");
+            
             _jumpController?.ResetStuckDetection();
         }
         
-        Debug.Log($"[Monster] 공중 넉백 착지 - 위치: {transform.position}");
+        Debug.Log($"[Monster] 공중 넥백 착지 - 위치: {transform.position}");
     }
 
     /// <summary>

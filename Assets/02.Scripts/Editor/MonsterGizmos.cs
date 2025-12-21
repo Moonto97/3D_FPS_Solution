@@ -19,6 +19,26 @@ public static class MonsterGizmos
         
         MonsterJumpController jumpController = monster.JumpController;
         
+        // ========== 순찰 범위 표시 (연두색) ==========
+        MonsterStats stats = monster.GetComponent<MonsterStats>();
+        if (stats != null && monster.DefaultPosition != Vector3.zero)
+        {
+            Gizmos.color = new Color(0.5f, 1f, 0.5f, 0.3f);  // 반투명 연두색
+            DrawWireCircle(monster.DefaultPosition, stats.PatrolRadius.Value, 32);
+            
+            // 기본 위치 표시
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireCube(monster.DefaultPosition, Vector3.one * 0.5f);
+            
+            // 현재 순찰 목표 표시 (Patrol 상태일 때만)
+            if (monster.State == EMonsterState.Patrol && monster.PatrolTarget != Vector3.zero)
+            {
+                Gizmos.color = new Color(0f, 1f, 0.5f);  // 청록색
+                Gizmos.DrawSphere(monster.PatrolTarget, 0.4f);
+                Gizmos.DrawLine(monster.transform.position, monster.PatrolTarget);
+            }
+        }
+        
         // 현재 목적지 표시 (흰색)
         if (monster.CurrentDestination != Vector3.zero)
         {
