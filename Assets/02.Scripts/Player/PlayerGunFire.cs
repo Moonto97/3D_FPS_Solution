@@ -35,7 +35,7 @@ public class PlayerGunFire : MonoBehaviour
     [SerializeField] private string _hitEffectPoolTag = "HitEffect";
     [SerializeField] private int _poolInitialSize = 10;
     [SerializeField] private float _effectDuration = 2f;
-
+    
     #endregion
 
     #region ========== Constants ==========
@@ -64,6 +64,8 @@ public class PlayerGunFire : MonoBehaviour
 
     // 풀 상태
     private bool _isPoolInitialized;
+    
+    private EZoomMode _zoomMode = EZoomMode.Normal;
 
     #endregion
 
@@ -167,6 +169,21 @@ public class PlayerGunFire : MonoBehaviour
 
     #region ========== Update & Input ==========
 
+    private void ZoomModeCheck()
+    {
+        if (Input.GetMouseButton(1))
+        {
+            _zoomMode = EZoomMode.ZoomIn;
+            
+        }
+        else
+        {
+            _zoomMode = EZoomMode.Normal;
+        }
+    }
+    
+    
+    
     private void Update()
     {
         // 게임 상태 체크: Playing이 아니면 입력 무시

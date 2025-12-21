@@ -1,69 +1,118 @@
 using UnityEngine;
 
-public class Bomb : MonoBehaviour
+/// <summary>
+/// 폭탄 오브젝트: 충돌 시 범위 데미지를 주고 풀로 반환됨
+/// </summary>
+public class Bomb : MonoBehaviour, IPoolable
 {
-    public GameObject _explosionEffectPrefab;
+    // ─────────────────────────────────────────────────────────
+    // 폭발 설정 (Inspector 튜닝)
+    // ─────────────────────────────────────────────────────────
+    [Header("폭발 설정")]
+    [SerializeField] private GameObject _explosionEffectPrefab;
+    [SerializeField] private float _explosionRadius = 2f;
+    [SerializeField] private float _damage = 1000f;
+    
+    // ─────────────────────────────────────────────────────────
+    // 풀링 설정 (프리팹 Inspector에서 설정)
+    // ─────────────────────────────────────────────────────────
+    [Header("풀링")]
+    [Tooltip("ObjectPoolManager에 등록된 태그와 일치해야 함")]
+    [SerializeField] private string _poolTag = "Bomb";
+    
+    private Rigidbody _rigidbody;
+    
+    // 구버전 호환용 프로퍼티
+    public float ExplosionRadius => _explosionRadius;
+    public float Damage => _damage;
+    
+    private void Awake()
+    {
+        _rigidbody = GetComponent<Rigidbody>();
+        
+        if (_rigidbody == null)
+        {
+            Debug.LogError($"[Bomb] Rigidbody가 없습니다! GameObject: {gameObject.name}");
+        }
+    }
 
-    public float ExplosionRadius = 2;
-    public float Damage = 1000;
+
+    // ─────────────────────────────────────────────────────────
+    // IPoolable 구현
+    // ─────────────────────────────────────────────────────────
+    
+    /// <summary>
+    /// 풀에서 꺼내질 때: 이전 물리 상태 초기화
+    /// </summary>
+    public void OnSpawnFromPool()
+    {
+        if (_rigidbody != null)
+        {
+            _rigidbody.linearVelocity = Vector3.zero;
+            _rigidbody.angularVelocity = Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// 풀로 반환될 때: 정리 작업 (현재는 없음)
+    /// </summary>
+    public void OnReturnToPool()
+    {
+        // 향후 파티클, 사운드 등 추가 시 여기서 정리
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 충돌 처리
+    // ─────────────────────────────────────────────────────────
     
     private void OnCollisionEnter(Collision collision)
     {
-        // 내 위치에 폭발 이펙트 생성
-        if (_explosionEffectPrefab != null)
-        {
-            GameObject effectObject = Instantiate(_explosionEffectPrefab, transform.position, Quaternion.identity);
-            Debug.Log($"폭발 이펙트 생성: {effectObject.name} at {transform.position}");
-        }
-        else
-        {
-            Debug.LogWarning("폭발 이펙트 프리팹이 할당되지 않았습니다!");
-        }
+        SpawnExplosionEffect();
+        DealDamageToMonstersInRadius();
+        ReturnToPool();
+    }
 
-        // 목표 : 폭발했을때 일정범위안에 몬스터가 있다면 대미지를 주고싶다.
-        
-        // 속성:
-        //  - 폭발 반경
-        //  - 대미지
 
-        Vector3 position = transform.position;
-        // 1. 씬을 모두 순회하면서 게임 오브젝트를 찾는다. 1000 번 순회
-        // 2. 모든 몬스터를 순회하면서 거리를 측정한다..   500 번 순회
-        /*Monster[] monsters = FindObjectsOfType<Monster>();
-        for (int i = 0; i < monsters.Length; i++)
+    private void SpawnExplosionEffect()
+    {
+        if (_explosionEffectPrefab == null)
         {
-            if(몬스터와의 거리 < ExplosionRadius)
-            {
-                대미지를 준다.
-            }
-        }*/
+            Debug.LogWarning("[Bomb] 폭발 이펙트 프리팹이 할당되지 않았습니다!");
+            return;
+        }
         
-        // 가상의 구를 만들어서 그 구 영역에 안에있는 모든 콜라이더를 찾아서 배열로 반환한다..
-        Collider[] colliders = Physics.OverlapSphere(transform.position, ExplosionRadius, LayerMask.GetMask("Monster"));
+        Instantiate(_explosionEffectPrefab, transform.position, Quaternion.identity);
+    }
+
+    private void DealDamageToMonstersInRadius()
+    {
+        Collider[] colliders = Physics.OverlapSphere(
+            transform.position, 
+            _explosionRadius, 
+            LayerMask.GetMask("Monster")
+        );
+        
         for (int i = 0; i < colliders.Length; i++)
         {
-            Monster monster = colliders[i].gameObject.GetComponent<Monster>();
-            if (monster == null) continue; // Monster 컴포넌트가 없으면 스킵
-
-            float distance = Vector3.Distance(transform.position, monster.transform.position);
-            distance = Mathf.Min(1f, distance);
-
-            float finalDamage = Damage / distance; // 폭발 원점과 거리에 따라서 대미지를 다르게 준다.
+            Monster monster = colliders[i].GetComponent<Monster>();
+            if (monster == null) continue;
             
-            monster.TryTakeDamage(finalDamage);
+            float distance = Vector3.Distance(transform.position, monster.transform.position);
+            distance = Mathf.Max(1f, distance);
+            
+            monster.TryTakeDamage(_damage / distance);
+        }
+    }
+
+    private void ReturnToPool()
+    {
+        if (ObjectPoolManager.Instance == null)
+        {
+            Debug.LogWarning("[Bomb] ObjectPoolManager가 없어 Destroy로 대체합니다.");
+            Destroy(gameObject);
+            return;
         }
         
-        
-        
-        /*if (collision.gameObject.layer == LayerMask.NameToLayer("Monster"))
-        
-        {
-            Monster monster = collision.gameObject.GetComponent<Monster>();
-            monster.TryTakeDamage(Damage);
-        }*/
-        
-        
-        // 충돌하면 나 자신을 삭제한다.
-        Destroy(gameObject);
+        ObjectPoolManager.Instance.Despawn(_poolTag, gameObject);
     }
 }

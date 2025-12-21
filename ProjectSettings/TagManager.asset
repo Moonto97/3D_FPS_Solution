@@ -6,6 +6,7 @@ TagManager:
   tags:
   - FxTemporaire
   - BulletVFX
+  - Bomb
   layers:
   - Default
   - TransparentFX
@@ -16,7 +17,7 @@ TagManager:
   - Player
   - Barrel
   - Monster
-  - 
+  - MinimapOnly
   - 
   - 
   - 
