@@ -71,7 +71,13 @@ public class Barrel : MonoBehaviour
             PlayerStats player = colliders[i].GetComponent<PlayerStats>();
             if (player != null)
             {
-                player.TakeDamage(finalDamage);
+                Damage damage = new Damage
+                {
+                    Value = finalDamage,
+                    HitPoint = transform.position,
+                    Who = gameObject
+                };
+                player.TryTakeDamage(damage);
                 continue;
             }
 

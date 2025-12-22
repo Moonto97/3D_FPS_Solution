@@ -1,24 +1,20 @@
-using System;
 using UnityEngine;
 
-// 키보드를 누르면 캐릭터를 그 방향으로 이동 시키고 싶다.
+/// <summary>
+/// 플레이어 이동 처리
+/// 책임: 키보드 입력에 따른 이동, 점프, 달리기
+/// </summary>
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(PlayerStats))]
 public class PlayerMove : MonoBehaviour
 {
-    [Serializable] // json, sciptableObject 혹은 DB에서 읽어오게 하면된다.
-    public class MoveConfig
-    {
-        public float Gravity;
-        public float RunStamina;
-        public float JumpStamina;
-    }
-
-    public MoveConfig _config;
+    [Header("이동 설정 (ScriptableObject)")]
+    [SerializeField] private MoveConfig _config;
 
     
     private CharacterController _controller;
     private PlayerStats _stats;
+    private Camera _mainCamera;
     
     private Animator _animator;
     
@@ -29,6 +25,22 @@ public class PlayerMove : MonoBehaviour
         _controller = GetComponent<CharacterController>();
         _stats = GetComponent<PlayerStats>();
         _animator = GetComponentInChildren<Animator>();
+        _mainCamera = Camera.main;
+        
+        ValidateReferences();
+    }
+    
+    private void ValidateReferences()
+    {
+        if (_config == null)
+        {
+            Debug.LogError("[PlayerMove] MoveConfig가 할당되지 않았습니다! Create > Player > Move Config로 생성 후 연결하세요.", this);
+        }
+        
+        if (_mainCamera == null)
+        {
+            Debug.LogError("[PlayerMove] Main Camera를 찾을 수 없습니다!", this);
+        }
     }
 
 private void Update()
@@ -65,7 +77,7 @@ private void Update()
         }
         
         // - 카메라가 쳐다보는 방향으로 변환한다. (월드 -> 로컬)
-        direction = Camera.main.transform.TransformDirection(direction);
+        direction = _mainCamera.transform.TransformDirection(direction);
         direction.y = _yVelocity; // 중력 적용
 
 

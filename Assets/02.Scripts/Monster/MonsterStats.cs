@@ -1,6 +1,10 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// 몬스터 스탯 데이터. Inspector에서 튜닝.
+/// 모든 수치 데이터를 중앙 관리하여 밸런싱 용이.
+/// </summary>
 [Serializable]
 public class MonsterStats : MonoBehaviour
 {
@@ -47,4 +51,20 @@ public class MonsterStats : MonoBehaviour
     
     [Tooltip("이동 막힘 판정 시간 (초)")]
     public ValueStat StuckThreshold;
+    
+    [Header("골드 드롭")]
+    [Tooltip("골드 코인 프리팹")]
+    public GameObject GoldCoinPrefab;
+    
+    [Range(0f, 1f), Tooltip("골드 드롭 확률 (0~1)")]
+    public float GoldDropChance = 0.5f;
+    
+    [Tooltip("드롭 시 스폰되는 높이")]
+    public float GoldDropHeight = 1.5f;
+    
+    [Tooltip("드롭할 코인 최소 개수")]
+    public int GoldDropCountMin = 3;
+    
+    [Tooltip("드롭할 코인 최대 개수")]
+    public int GoldDropCountMax = 7;
 }
