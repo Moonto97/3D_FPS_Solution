@@ -69,7 +69,13 @@ public class Monster : MonoBehaviour, IDamageable
     // === 피격 애니메이션 ===
     private float _hitAnimationLength;    // Hit 클립 원본 길이 (캐싱)
     private const string ANIM_PARAM_HIT_SPEED = "HitSpeed";
-    private const string HIT_CLIP_NAME = "Zombie Reaction Hit";  // FBX 내 클립 이름
+    private const string HIT_CLIP_NAME = "Zombie Reaction Hit";
+    
+    // === Death 애니메이션 ===
+    private const string DEATH_CLIP_NAME = "Standing React Death Right 1";  // FBX 내부 클립명
+    private const float DEATH_LINGER_TIME = 2f;           // 애니메이션 후 대기 시간
+    private float _deathAnimationLength;                   // Death 클립 길이 (캐싱)
+  // FBX 내 클립 이름
     
     // 넉백 전 상태 저장 (복귀용)
     private EMonsterState _preKnockbackState;
@@ -132,7 +138,46 @@ public class Monster : MonoBehaviour, IDamageable
     /// Hit 애니메이션 클립 길이를 캐싱.
     /// KnockbackDuration에 맞춰 재생 속도 조절에 사용.
     /// </summary>
-    private void CacheHitAnimationLength()
+        /// <summary>
+    /// Death 애니메이션 클립 길이를 캐싱.
+    /// Destroy 타이밍 계산에 사용 (애니메이션 길이 + DEATH_LINGER_TIME).
+    /// </summary>
+/// <summary>
+    /// Death 애니메이션 클립 길이를 캐싱.
+    /// Destroy 타이밍 계산에 사용 (애니메이션 길이 + DEATH_LINGER_TIME).
+    /// </summary>
+    private void CacheDeathAnimationLength()
+    {
+        if (_animator == null || _animator.runtimeAnimatorController == null)
+        {
+            Debug.LogWarning("[Monster] Animator가 없어 Death 애니메이션 길이를 가져올 수 없습니다.", this);
+            _deathAnimationLength = 3.5f;
+            return;
+        }
+        
+        // 디버그: 모든 클립 이름 출력
+        Debug.Log($"[Monster] AnimatorController 클립 목록 ({_animator.runtimeAnimatorController.animationClips.Length}개):");
+        foreach (var clip in _animator.runtimeAnimatorController.animationClips)
+        {
+            Debug.Log($"  - '{clip.name}' ({clip.length:F2}초)");
+        }
+        
+        // 정확한 클립명으로만 검색 (Contains 제거)
+        foreach (var clip in _animator.runtimeAnimatorController.animationClips)
+        {
+            if (clip.name == DEATH_CLIP_NAME)
+            {
+                _deathAnimationLength = clip.length;
+                Debug.Log($"[Monster] Death 애니메이션 길이: {_deathAnimationLength:F2}초 ('{clip.name}')");
+                return;
+            }
+        }
+        
+        Debug.LogWarning($"[Monster] '{DEATH_CLIP_NAME}' 클립을 찾을 수 없습니다. 기본값 사용.", this);
+        _deathAnimationLength = 3.5f;
+    }
+    
+private void CacheHitAnimationLength()
     {
         if (_animator == null || _animator.runtimeAnimatorController == null)
         {
@@ -161,8 +206,9 @@ private void Start()
         _defaultPosition = transform.position;
         _agent.speed = _monsterStats.MoveSpeed.Value;
         
-        // Hit 애니메이션 길이 캐싱 (속도 조절용)
+        // Hit/Death 애니메이션 길이 캐싱
         CacheHitAnimationLength();
+        CacheDeathAnimationLength();
         
         // 점프 컨트롤러 초기화
         if (_jumpController == null)
@@ -810,15 +856,36 @@ private void CompleteAirborneKnockback(Vector3 landingPoint)
     /// <summary>
     /// 사망 코루틴. 골드 드롭 + 파괴.
     /// </summary>
+/// <summary>
+    /// 사망 코루틴. 애니메이션 재생 + 골드 드롭 + 파괴.
+    /// </summary>
+/// <summary>
+    /// 사망 코루틴. 애니메이션 재생 + 골드 드롭 + 파괴.
+    /// </summary>
+/// <summary>
+    /// 사망 코루틴. 애니메이션 재생 + 골드 드롭 + 파괴.
+    /// </summary>
+/// <summary>
+    /// 사망 코루틴. 애니메이션 재생 + 골드 드롭 + 파괴.
+    /// </summary>
     private IEnumerator Death_Coroutine()
     {
-        // 넉백 완료 대기 (죽으면서 밀려나는 연출)
+        // 넙백 완료 대기 (죽으면서 밀려나는 연출)
         yield return new WaitUntil(() => !_isKnockbackActive);
+        
+        // 사망 후 추가 피격 방지 (CharacterController는 Collider 역할도 수행)
+        _controller.enabled = false;
+        
+       
+        
+        // Death 애니메이션 시작
+        _animator.SetTrigger("Death");
         
         // 사망 시 골드 드롭 시도
         TryDropGold();
         
-        yield return new WaitForSeconds(2f);
+        // 애니메이션 길이 + 바닥에 누워있는 시간 후 삭제
+        yield return new WaitForSeconds(_deathAnimationLength + DEATH_LINGER_TIME);
         Destroy(gameObject);
     }
     
@@ -844,7 +911,13 @@ private void CompleteAirborneKnockback(Vector3 landingPoint)
             
             if (coin != null && coin.TryGetComponent(out GoldCoin goldCoin))
             {
-                goldCoin.LaunchDrop();
+                // 소닉 스타일: 균등 각도로 방사형 폭발
+                Debug.Log($"[Monster] LaunchRadial 호출: index={i}, total={dropCount}");
+                goldCoin.LaunchRadial(i, dropCount);
+            }
+            else
+            {
+                Debug.LogWarning($"[Monster] GoldCoin 컴포넌트 못 찾음! coin={coin}");
             }
         }
         

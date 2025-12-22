@@ -146,6 +146,7 @@ public class GoldCoin : MonoBehaviour, IPoolable
     
     /// <summary>
     /// 몬스터가 드랍할 때 호출. 랜덤 방향으로 튀어오름.
+    /// 단일 코인 드랍 시 사용.
     /// </summary>
     public void LaunchDrop()
     {
@@ -166,6 +167,43 @@ public class GoldCoin : MonoBehaviour, IPoolable
         _rb.AddForce(launchForce, ForceMode.Impulse);
         
         // 회전도 약간 추가 (시각적 재미)
+        _rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
+    }
+    
+    /// <summary>
+    /// 소닉 스타일 방사형 드랍. 360°를 totalCount로 나눈 각도로 발사.
+    /// 여러 코인이 폭발하듯 균등하게 퍼지는 효과.
+    /// </summary>
+    /// <param name="index">현재 코인 인덱스 (0 ~ totalCount-1)</param>
+    /// <param name="totalCount">전체 코인 개수</param>
+    public void LaunchRadial(int index, int totalCount)
+    {
+        _isDropping = true;
+        _isAttracted = false;
+        _dropTimer = 0f;
+        
+        // Rigidbody 활성화
+        _rb.isKinematic = false;
+        _rb.useGravity = true;
+        
+        // 균등 각도 계산: 360° / 총 개수 = 각 코인 간격
+        float angleStep = 360f / totalCount;
+        float angle = angleStep * index;
+        float angleRad = angle * Mathf.Deg2Rad;
+        
+        // 방향 벡터 (XZ 평면에서 원형 배치)
+        Vector3 spreadDir = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad));
+        
+        // 힘: 위로 + 수평 산개 (포물선 궤적)
+        Vector3 launchForce = Vector3.up * _dropUpForce + spreadDir * _dropSpreadForce;
+        
+        // [디버그] 실제 발사 각도 확인
+        Debug.Log($"[GoldCoin] index={index}, angle={angle}°, dir=({spreadDir.x:F2}, {spreadDir.z:F2}), force={launchForce}");
+        
+        _rb.linearVelocity = Vector3.zero;
+        _rb.AddForce(launchForce, ForceMode.Impulse);
+        
+        // 약간의 랜덤 회전 (시각적 재미)
         _rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
     }
     
