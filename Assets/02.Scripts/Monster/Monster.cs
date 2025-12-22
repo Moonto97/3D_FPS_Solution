@@ -66,6 +66,11 @@ public class Monster : MonoBehaviour, IDamageable
     private float _knockbackTimer;
     private const float KNOCKBACK_GRAVITY = 20f;
     
+    // === 피격 애니메이션 ===
+    private float _hitAnimationLength;    // Hit 클립 원본 길이 (캐싱)
+    private const string ANIM_PARAM_HIT_SPEED = "HitSpeed";
+    private const string HIT_CLIP_NAME = "Zombie Reaction Hit";  // FBX 내 클립 이름
+    
     // 넉백 전 상태 저장 (복귀용)
     private EMonsterState _preKnockbackState;
     
@@ -123,10 +128,41 @@ public class Monster : MonoBehaviour, IDamageable
         }
     }
     
+    /// <summary>
+    /// Hit 애니메이션 클립 길이를 캐싱.
+    /// KnockbackDuration에 맞춰 재생 속도 조절에 사용.
+    /// </summary>
+    private void CacheHitAnimationLength()
+    {
+        if (_animator == null || _animator.runtimeAnimatorController == null)
+        {
+            Debug.LogWarning("[Monster] Animator가 없어 Hit 애니메이션 길이를 가져올 수 없습니다.", this);
+            _hitAnimationLength = 1f;  // 폴백: 1초 (속도 1배)
+            return;
+        }
+        
+        // RuntimeAnimatorController의 모든 클립에서 Hit 클립 탐색
+        foreach (var clip in _animator.runtimeAnimatorController.animationClips)
+        {
+            if (clip.name == HIT_CLIP_NAME)
+            {
+                _hitAnimationLength = clip.length;
+                Debug.Log($"[Monster] Hit 애니메이션 길이: {_hitAnimationLength:F2}초");
+                return;
+            }
+        }
+        
+        Debug.LogWarning($"[Monster] '{HIT_CLIP_NAME}' 클립을 찾을 수 없습니다.", this);
+        _hitAnimationLength = 1f;  // 폴백
+    }
+    
 private void Start()
     {
         _defaultPosition = transform.position;
         _agent.speed = _monsterStats.MoveSpeed.Value;
+        
+        // Hit 애니메이션 길이 캐싱 (속도 조절용)
+        CacheHitAnimationLength();
         
         // 점프 컨트롤러 초기화
         if (_jumpController == null)
@@ -593,6 +629,14 @@ private void Comeback()
         Vector3 attackerPosition = (attacker != null) ? attacker.transform.position : _player.transform.position;
         _knockbackVelocity = (transform.position - attackerPosition).normalized 
                             * _monsterStats.KnockbackForce.Value;
+        
+        // Hit 애니메이션 속도 조절: KnockbackDuration에 맞춤
+        // 예) 애니메이션 1.2초, 넉백 0.6초 → 속도 2배
+        float knockbackDuration = _monsterStats.KnockbackDuration.Value;
+        float hitSpeed = (knockbackDuration > 0f) 
+            ? _hitAnimationLength / knockbackDuration 
+            : 1f;
+        _animator.SetFloat(ANIM_PARAM_HIT_SPEED, hitSpeed);
     }
 
     /// <summary>
