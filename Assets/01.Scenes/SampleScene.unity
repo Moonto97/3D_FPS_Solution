@@ -1873,6 +1873,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _monsterStats: {fileID: 540719310}
   _playerStats: {fileID: 1423029337}
+--- !u!114 &540719324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540719307}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16c8a5948fb32c14e8b54e282a0dd04a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &540719325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540719307}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d48255cf50f8fb4d90554a73bd16a40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &547054289
 GameObject:
   m_ObjectHideFlags: 0
@@ -4381,19 +4405,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88f7fecc980e977448e5bd698f993e8b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!134 &1459018935
-PhysicsMaterial:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: ' (Instance) (Instance) (Instance) (Instance)'
-  serializedVersion: 2
-  m_DynamicFriction: 0.6
-  m_StaticFriction: 0.6
-  m_Bounciness: 0
-  m_FrictionCombine: 0
-  m_BounceCombine: 0
 --- !u!1 &1484695625
 GameObject:
   m_ObjectHideFlags: 0
@@ -6011,6 +6022,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2044655858}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!134 &2045602394
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ' (Instance) (Instance) (Instance) (Instance) (Instance)'
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!21 &2090397557
 Material:
   serializedVersion: 8
@@ -6260,9 +6284,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 330585545}
     - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
+      propertyPath: _death
+      value: 
+      objectReference: {fileID: 540719324}
+    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: _player
       value: 
       objectReference: {fileID: 1423029328}
+    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
+      propertyPath: _knockback
+      value: 
+      objectReference: {fileID: 540719325}
     - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: _playerStats
       value: 
@@ -6284,6 +6316,10 @@ PrefabInstance:
       value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 3746275912144847311, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
+      propertyPath: GoldCoinPrefab
+      value: 
+      objectReference: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
+    - target: {fileID: 3746275912144847311, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: Health._maxValue
       value: 50
       objectReference: {fileID: 0}
@@ -6294,7 +6330,7 @@ PrefabInstance:
     - target: {fileID: 5896814241986697486, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: m_Material
       value: 
-      objectReference: {fileID: 1459018935}
+      objectReference: {fileID: 2045602394}
     - target: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: m_Name
       value: Monster
@@ -6350,6 +6386,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       insertIndex: -1
       addedObject: {fileID: 540719316}
+    - targetCorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 540719325}
+    - targetCorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 540719324}
   m_SourcePrefab: {fileID: 100100000, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

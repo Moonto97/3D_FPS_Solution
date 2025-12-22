@@ -65,6 +65,9 @@ public class PlayerGunFire : MonoBehaviour
     // 풀 상태
     private bool _isPoolInitialized;
     
+    // 카메라 캐싱 (Camera.main은 매번 태그 검색하므로 비효율)
+    private Camera _mainCamera;
+    
     private EZoomMode _zoomMode = EZoomMode.Normal;
 
     #endregion
@@ -98,6 +101,7 @@ public class PlayerGunFire : MonoBehaviour
 
     private void Start()
     {
+        _mainCamera = Camera.main;
         InitializeHitEffectPool();
         InitializeRecoil();
         InitializeAmmo();
@@ -322,7 +326,7 @@ private void Fire()
         ApplyRecoil();
 
         // 레이캐스트 (카메라 중앙 → 전방)
-        Ray ray = new Ray(_fireTransform.position, Camera.main.transform.forward);
+        Ray ray = new Ray(_fireTransform.position, _mainCamera.transform.forward);
         if (Physics.Raycast(ray, out RaycastHit hitInfo))
         {
             PlayHitEffect(hitInfo.point, hitInfo.normal);
@@ -369,20 +373,20 @@ private IEnumerator BurstFireCoroutine()
 
     /// <summary>
     /// 피격 대상에게 데미지 전달
+    /// IDamageable 인터페이스로 모든 피격 가능 대상 처리 (Monster, Barrel 등)
     /// </summary>
     private void ProcessDamage(RaycastHit hitInfo)
     {
-        Monster monster = hitInfo.collider.GetComponent<Monster>();
-        if (monster != null)
+        // IDamageable 구현체면 데미지 적용 (Monster, Player, Barrel 등)
+        if (hitInfo.collider.TryGetComponent(out IDamageable damageable))
         {
-            // Damage 구조체로 피격 정보 전달 (데미지값, 피격위치, 공격자)
             Damage damage = new Damage
             {
                 Value = _damage,
                 HitPoint = hitInfo.point,
-                Who = gameObject  // 발사한 플레이어
+                Who = gameObject
             };
-            monster.TryTakeDamage(damage);
+            damageable.TryTakeDamage(damage);
         }
     }
 

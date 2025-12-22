@@ -197,9 +197,6 @@ public class GoldCoin : MonoBehaviour, IPoolable
         // 힘: 위로 + 수평 산개 (포물선 궤적)
         Vector3 launchForce = Vector3.up * _dropUpForce + spreadDir * _dropSpreadForce;
         
-        // [디버그] 실제 발사 각도 확인
-        Debug.Log($"[GoldCoin] index={index}, angle={angle}°, dir=({spreadDir.x:F2}, {spreadDir.z:F2}), force={launchForce}");
-        
         _rb.linearVelocity = Vector3.zero;
         _rb.AddForce(launchForce, ForceMode.Impulse);
         
@@ -284,7 +281,6 @@ public class GoldCoin : MonoBehaviour, IPoolable
         if (_playerStats != null)
         {
             _playerStats.AddGold(_goldValue);
-            Debug.Log($"[GoldCoin] 골드 획득! +{_goldValue} (총: {_playerStats.Gold})");
         }
         
         // TODO: 획득 이펙트/사운드 추가 가능

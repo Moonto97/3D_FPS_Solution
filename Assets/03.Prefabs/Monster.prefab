@@ -489,6 +489,9 @@ GameObject:
   - component: {fileID: 3746275912144847311}
   - component: {fileID: 3689506521930192219}
   - component: {fileID: 1214171482781068861}
+  - component: {fileID: 8559674416964288883}
+  - component: {fileID: 493202626635828891}
+  - component: {fileID: 2599556011563490243}
   m_Layer: 8
   m_Name: Monster
   m_TagString: Untagged
@@ -612,11 +615,8 @@ MonoBehaviour:
   _agent: {fileID: 1214171482781068861}
   _animator: {fileID: 3977633635055626316}
   _jumpController: {fileID: 3689506521930192219}
-  _goldCoinPrefab: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
-  _goldDropChance: 1
-  _goldDropHeight: 10
-  _goldDropCountMin: 1
-  _goldDropCountMax: 1
+  _knockback: {fileID: 493202626635828891}
+  _death: {fileID: 2599556011563490243}
   _groundLayer:
     serializedVersion: 2
     m_Bits: 415
@@ -668,6 +668,11 @@ MonoBehaviour:
     _value: 0.5
   StuckThreshold:
     _value: 0.5
+  GoldCoinPrefab: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
+  GoldDropChance: 0.5
+  GoldDropHeight: 1.5
+  GoldDropCountMin: 3
+  GoldDropCountMax: 7
 --- !u!114 &3689506521930192219
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -702,6 +707,44 @@ NavMeshAgent:
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &8559674416964288883
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8818849991473735847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7e3f706044d3a54abd3b56f39f97f1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _monsterStats: {fileID: 3746275912144847311}
+  _playerStats: {fileID: 0}
+--- !u!114 &493202626635828891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8818849991473735847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d48255cf50f8fb4d90554a73bd16a40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &2599556011563490243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8818849991473735847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16c8a5948fb32c14e8b54e282a0dd04a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &2072733042219150892
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -714,6 +757,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 676b4ae0a39fece49b724098d225c3fe, type: 2}
+    - target: {fileID: -6057140222963153312, guid: 8f7380da49034cd488ddff94b1ac35d1, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: 8f7380da49034cd488ddff94b1ac35d1, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
