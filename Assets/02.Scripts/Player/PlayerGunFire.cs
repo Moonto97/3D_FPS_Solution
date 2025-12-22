@@ -375,7 +375,14 @@ private IEnumerator BurstFireCoroutine()
         Monster monster = hitInfo.collider.GetComponent<Monster>();
         if (monster != null)
         {
-            monster.TryTakeDamage(_damage);
+            // Damage 구조체로 피격 정보 전달 (데미지값, 피격위치, 공격자)
+            Damage damage = new Damage
+            {
+                Value = _damage,
+                HitPoint = hitInfo.point,
+                Who = gameObject  // 발사한 플레이어
+            };
+            monster.TryTakeDamage(damage);
         }
     }
 

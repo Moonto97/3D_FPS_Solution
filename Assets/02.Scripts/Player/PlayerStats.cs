@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 // 플레이어의 '스탯'을 관리하는 컴포넌트
-public class PlayerStats : MonoBehaviour
+public class PlayerStats : MonoBehaviour, IDamageable
 {
     // 고민해볼 거리
     // 1. 옵저버 패턴은 어떻게 해야지?
@@ -47,13 +47,20 @@ public class PlayerStats : MonoBehaviour
             Death();
         }
     } 
-    public void TakeDamage(float damage)
+    /// <summary>
+    /// IDamageable 구현. 데미지 적용 + UI 이벤트 발행.
+    /// </summary>
+    /// <param name="damage">데미지 정보 (값, 피격위치, 공격자)</param>
+    /// <returns>항상 true (플레이어는 무적 시스템 없음)</returns>
+    public bool TryTakeDamage(Damage damage)
     {
-        Health.Decrease(damage);
-        Debug.Log($"플레이어 피격! 남은 체력: {Health.Value}");
+        Health.Decrease(damage.Value);
+        Debug.Log($"플레이어 피격! 공격자: {damage.Who?.name ?? "Unknown"}, 남은 체력: {Health.Value}");
         
         // 피격 이벤트 발행 → UI_DamageEffect 등이 구독
         OnDamaged?.Invoke();
+        
+        return true;
     }
 
     

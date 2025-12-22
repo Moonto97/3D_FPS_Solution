@@ -97,10 +97,18 @@ public class Bomb : MonoBehaviour, IPoolable
             Monster monster = colliders[i].GetComponent<Monster>();
             if (monster == null) continue;
             
+            // 거리 기반 데미지 감쇠
             float distance = Vector3.Distance(transform.position, monster.transform.position);
             distance = Mathf.Max(1f, distance);
             
-            monster.TryTakeDamage(_damage / distance);
+            // Damage 구조체로 폭발 정보 전달
+            Damage damage = new Damage
+            {
+                Value = _damage / distance,
+                HitPoint = transform.position,  // 폭발 중심점
+                Who = gameObject                // 폭탄 자체
+            };
+            monster.TryTakeDamage(damage);
         }
     }
 

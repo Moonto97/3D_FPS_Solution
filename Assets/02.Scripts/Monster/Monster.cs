@@ -11,7 +11,7 @@ using UnityEngine.AI;
 /// - 넉백: _isKnockbackActive로 관리. 넉백 중에도 추가 피격 가능(무적 끝나면).
 /// - 애니메이션: 매 피격마다 "Hit" 트리거 재발동.
 /// </summary>
-public class Monster : MonoBehaviour
+public class Monster : MonoBehaviour, IDamageable
 {
     #region 상태 및 참조
     
@@ -521,7 +521,8 @@ private void Comeback()
     /// 5. 애니메이션 재생
     /// 6. 사망 체크
     /// </summary>
-    public bool TryTakeDamage(float damage)
+    /// <param name="damage">데미지 정보 (값, 피격위치, 공격자)</param>
+    public bool TryTakeDamage(Damage damage)
     {
         // 사망 상태면 완전 차단
         if (State == EMonsterState.Death)
@@ -538,14 +539,14 @@ private void Comeback()
         // === 피격 처리 시작 ===
         
         // 1. 데미지 적용
-        _monsterStats.Health.Decrease(damage);
+        _monsterStats.Health.Decrease(damage.Value);
         
         // 2. 무적 타이머 시작 (연타 방지)
         float invincibilityDuration = _monsterStats.InvincibilityDuration?.Value ?? DEFAULT_INVINCIBILITY;
         _invincibilityTimer = invincibilityDuration;
         
-        // 3. 넉백 시작 (기존 넉백 중이면 리셋)
-        StartKnockback();
+        // 3. 넉백 시작 (공격자 정보 전달)
+        StartKnockback(damage.Who);
         
         // 4. 애니메이션 재생 (매 피격마다)
         _animator.SetTrigger("Hit");
@@ -564,7 +565,8 @@ private void Comeback()
     /// <summary>
     /// 넉백 시작. 기존 넉백 중이면 리셋하고 새로 시작.
     /// </summary>
-    private void StartKnockback()
+    /// <param name="attacker">공격자 게임오브젝트. null이면 플레이어 기준으로 폴백.</param>
+    private void StartKnockback(GameObject attacker)
     {
         // 점프 중 피격 시 공중 넉백 처리
         bool wasJumping = State == EMonsterState.Jump && _jumpController != null && _jumpController.IsJumping;
@@ -587,8 +589,9 @@ private void Comeback()
         _knockbackTimer = 0f;
         _agent.enabled = false;  // Agent 비활성화 (간섭 차단)
 
-        // 넉백 방향: 플레이어 반대 방향
-        _knockbackVelocity = (transform.position - _player.transform.position).normalized 
+        // 넉백 방향: 공격자 반대 방향 (공격자 없으면 플레이어 기준)
+        Vector3 attackerPosition = (attacker != null) ? attacker.transform.position : _player.transform.position;
+        _knockbackVelocity = (transform.position - attackerPosition).normalized 
                             * _monsterStats.KnockbackForce.Value;
     }
 
