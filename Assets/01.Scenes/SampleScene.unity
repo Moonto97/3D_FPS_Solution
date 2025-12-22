@@ -1843,60 +1843,6 @@ RectTransform:
   m_AnchoredPosition: {x: 5, y: 0}
   m_SizeDelta: {x: -10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &540719307 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-  m_PrefabInstance: {fileID: 8640369237032275568}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &540719310 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3746275912144847311, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-  m_PrefabInstance: {fileID: 8640369237032275568}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 540719307}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9a33597d0202a844d8758f4906be548a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &540719316
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 540719307}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7e3f706044d3a54abd3b56f39f97f1a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _monsterStats: {fileID: 540719310}
-  _playerStats: {fileID: 1423029337}
---- !u!114 &540719324
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 540719307}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 16c8a5948fb32c14e8b54e282a0dd04a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &540719325
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 540719307}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d48255cf50f8fb4d90554a73bd16a40, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &547054289
 GameObject:
   m_ObjectHideFlags: 0
@@ -6284,53 +6230,25 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 330585545}
     - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: _death
-      value: 
-      objectReference: {fileID: 540719324}
-    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: _player
       value: 
       objectReference: {fileID: 1423029328}
     - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: _knockback
-      value: 
-      objectReference: {fileID: 540719325}
-    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: _playerStats
       value: 
       objectReference: {fileID: 1423029337}
-    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: _goldDropHeight
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: _goldDropCountMax
-      value: 10
-      objectReference: {fileID: 0}
-    - target: {fileID: 2172919203720265082, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: _goldDropCountMin
-      value: 10
-      objectReference: {fileID: 0}
     - target: {fileID: 3746275912144847311, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: Health._value
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 3746275912144847311, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: GoldCoinPrefab
-      value: 
-      objectReference: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
-    - target: {fileID: 3746275912144847311, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: Health._maxValue
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 3977633635055626316, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      propertyPath: m_ApplyRootMotion
-      value: 0
+      propertyPath: GoldDropChance
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5896814241986697486, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 2045602394}
+    - target: {fileID: 8559674416964288883, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
+      propertyPath: _playerStats
+      value: 
+      objectReference: {fileID: 1423029337}
     - target: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
       propertyPath: m_Name
       value: Monster
@@ -6382,16 +6300,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 540719316}
-    - targetCorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 540719325}
-    - targetCorrespondingSourceObject: {fileID: 8818849991473735847, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 540719324}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: aad7f902ed37e3f4f83bbfbffdddc973, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
