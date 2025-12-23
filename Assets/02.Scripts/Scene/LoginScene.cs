@@ -90,7 +90,7 @@ public class LoginScene : MonoBehaviour
         }
         
         // 4. 있다면 씬 이동
-        SceneManager.LoadScene("SampleScene");
+        SceneManager.LoadScene("LoadingScene");
     }
 
     private void Register()

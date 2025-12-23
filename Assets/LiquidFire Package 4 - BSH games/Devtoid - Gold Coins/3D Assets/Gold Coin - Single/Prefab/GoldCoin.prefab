@@ -73,7 +73,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69ea69a447cc2144e994ddbf241abeff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _attractRadius: 10
+  _attractRadius: 25
   _collectRadius: 0.5
   _goldValue: 10
   _dropUpForce: 5
