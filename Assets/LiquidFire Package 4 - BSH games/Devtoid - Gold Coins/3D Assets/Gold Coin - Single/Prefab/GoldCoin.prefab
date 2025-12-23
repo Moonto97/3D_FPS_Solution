@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4244701375105762}
   - component: {fileID: 3604911457529306940}
   - component: {fileID: 399258511406869743}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: GoldCoin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -73,7 +73,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69ea69a447cc2144e994ddbf241abeff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _attractRadius: 5
+  _attractRadius: 10
   _collectRadius: 0.5
   _goldValue: 10
   _dropUpForce: 5
@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 33160559832521050}
   - component: {fileID: 23941041030839374}
   - component: {fileID: 6646672681575716841}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: GoldCoin
   m_TagString: Untagged
   m_Icon: {fileID: 0}

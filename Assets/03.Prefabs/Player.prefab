@@ -238,10 +238,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96f23447424cbcd4ebc1075c0c994e45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _config:
-    Gravity: -9.8
-    RunStamina: 10
-    JumpStamina: 10
+  _config: {fileID: 11400000, guid: 131e641db20cf3a49abb9e2cb3c21947, type: 2}
 --- !u!143 &7066982933811239444
 CharacterController:
   m_ObjectHideFlags: 0

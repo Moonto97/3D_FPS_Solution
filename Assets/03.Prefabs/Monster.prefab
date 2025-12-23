@@ -639,7 +639,7 @@ MonoBehaviour:
   MoveSpeed:
     _value: 5
   DetectDistance:
-    _value: 10
+    _value: 50
   AttackSpeed:
     _value: 0.1
   AttackDistance:
@@ -669,7 +669,7 @@ MonoBehaviour:
   StuckThreshold:
     _value: 0.5
   GoldCoinPrefab: {fileID: 1498403948531744, guid: fa2c57d3f28a5e6419393e8bc3eeb32a, type: 3}
-  GoldDropChance: 0.5
+  GoldDropChance: 1
   GoldDropHeight: 1.5
   GoldDropCountMin: 3
   GoldDropCountMax: 7
@@ -812,6 +812,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -927199367670048503, guid: 8f7380da49034cd488ddff94b1ac35d1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8893520045297876478}
+    - targetCorrespondingSourceObject: {fileID: -927199367670048503, guid: 8f7380da49034cd488ddff94b1ac35d1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6869272179530856457}
   m_SourcePrefab: {fileID: 100100000, guid: 8f7380da49034cd488ddff94b1ac35d1, type: 3}
 --- !u!95 &3977633635055626316 stripped
 Animator:
@@ -842,3 +845,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _monsterStats: {fileID: 3746275912144847311}
   _playerStats: {fileID: 0}
+--- !u!114 &6869272179530856457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8062075200958674725}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 711eecafac969354ca114cd993118c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

@@ -57,6 +57,10 @@ public class Monster : MonoBehaviour, IDamageable
     private const float PATROL_ARRIVAL_THRESHOLD = 0.5f;
     private const int MAX_PATROL_SAMPLE_ATTEMPTS = 10;
     
+    // 점프 애니메이션 상수 (X_Bot_Jump.fbx 기준)
+    private const float JUMP_CLIP_LENGTH = 2.167f;    // 전체 클립 길이 (초)
+    private const float JUMP_PREPARE_TIME = 0.3f;     // 준비동작 시간 (약 9프레임 @30fps)
+    
     #endregion
 
     #region Properties
@@ -111,6 +115,7 @@ public class Monster : MonoBehaviour, IDamageable
         if (_jumpController != null)
         {
             _jumpController.Initialize(_player.transform, _agent, _groundLayer, _monsterStats);
+            _jumpController.OnJumpPrepare += HandleJumpPrepare;
             _jumpController.OnJumpStarted += HandleJumpStarted;
             _jumpController.OnJumpCompleted += HandleJumpCompleted;
         }
@@ -155,6 +160,7 @@ public class Monster : MonoBehaviour, IDamageable
         // 이벤트 구독 해제 (메모리 누수 방지)
         if (_jumpController != null)
         {
+            _jumpController.OnJumpPrepare -= HandleJumpPrepare;
             _jumpController.OnJumpStarted -= HandleJumpStarted;
             _jumpController.OnJumpCompleted -= HandleJumpCompleted;
         }
@@ -175,15 +181,49 @@ public class Monster : MonoBehaviour, IDamageable
 
     #region 이벤트 핸들러
     
-    private void HandleJumpStarted()
+    /// <summary>
+    /// 점프 준비 시작. 애니메이션 트리거 + 속도 조정.
+    /// airTime: 체공 시간 (물리 점프 시작부터 착지까지)
+    /// </summary>
+    private void HandleJumpPrepare(float airTime)
     {
         _currentDestination = Vector3.zero;
         State = EMonsterState.Jump;
+        
+        // 애니메이션 속도 계산: 체공 구간을 airTime에 맞춤
+        // 전체 클립에서 준비동작 제외한 부분 = 체공 + 착지
+        float animAirPortion = JUMP_CLIP_LENGTH - JUMP_PREPARE_TIME;
+        float animSpeed = animAirPortion / Mathf.Max(0.1f, airTime);
+        
+        // 속도가 너무 느리거나 빠르면 클램프
+        animSpeed = Mathf.Clamp(animSpeed, 0.5f, 2.0f);
+        
+        _animator.SetFloat("JumpSpeed", animSpeed);
+        _animator.SetTrigger("TraceToJump");
+        
+        Debug.Log($"[Monster] 점프 준비 - 체공:{airTime:F2}초, 애니속도:{animSpeed:F2}");
+    }
+    
+    private void HandleJumpStarted()
+    {
+        // 물리 점프 시작 시점 (Animation Event에서 트리거됨)
+        // State 변경과 애니메이션 시작은 HandleJumpPrepare에서 이미 처리됨
+        Debug.Log("[Monster] 물리 점프 시작");
     }
     
     private void HandleJumpCompleted()
     {
         State = EMonsterState.Trace;
+        _animator.SetTrigger("JumpToTrace");
+    }
+    
+    /// <summary>
+    /// Animation Event에서 호출. 물리 점프를 시작한다.
+    /// MonsterAnimationEventReceiver가 이 메서드를 호출.
+    /// </summary>
+    public void ExecutePhysicalJump()
+    {
+        _jumpController?.StartPhysicalJump();
     }
     
     private void HandleKnockbackStarted()

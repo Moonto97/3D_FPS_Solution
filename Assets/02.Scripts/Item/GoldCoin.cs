@@ -102,16 +102,16 @@ public class GoldCoin : MonoBehaviour, IPoolable
             return;
         }
         
-        // 드랍 중일 때: 타이머 증가, 착지 대기
+        // 드랍 중일 때: 바닥 근처 감지로 착지 판정
         if (_isDropping)
         {
             _dropTimer += Time.deltaTime;
             
-            // 착지 감지: 타이머 + Rigidbody 속도 감소
-            bool hasSettled = _dropTimer >= _dropSettleTime && 
-                              _rb.linearVelocity.magnitude < 0.5f;
+            // 바닥 감지: 아래로 Raycast (0.5 유닛 이내에 뭔가 있으면 바닥 근처)
+            bool isNearGround = Physics.Raycast(transform.position, Vector3.down, 0.5f);
             
-            if (hasSettled)
+            // 착지 조건: 최소 시간 경과 + 바닥 근처
+            if (_dropTimer >= _dropSettleTime && isNearGround)
             {
                 CompleteDrop();
             }
@@ -143,32 +143,6 @@ public class GoldCoin : MonoBehaviour, IPoolable
     #endregion
 
     #region 드랍 효과
-    
-    /// <summary>
-    /// 몬스터가 드랍할 때 호출. 랜덤 방향으로 튀어오름.
-    /// 단일 코인 드랍 시 사용.
-    /// </summary>
-    public void LaunchDrop()
-    {
-        _isDropping = true;
-        _isAttracted = false;
-        _dropTimer = 0f;
-        
-        // Rigidbody 활성화
-        _rb.isKinematic = false;
-        _rb.useGravity = true;
-        
-        // 랜덤 방향으로 힘 적용 (위 + 수평 산개)
-        Vector2 randomCircle = Random.insideUnitCircle;
-        Vector3 spreadDir = new Vector3(randomCircle.x, 0f, randomCircle.y).normalized;
-        Vector3 launchForce = Vector3.up * _dropUpForce + spreadDir * _dropSpreadForce;
-        
-        _rb.linearVelocity = Vector3.zero;  // 기존 속도 초기화
-        _rb.AddForce(launchForce, ForceMode.Impulse);
-        
-        // 회전도 약간 추가 (시각적 재미)
-        _rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
-    }
     
     /// <summary>
     /// 소닉 스타일 방사형 드랍. 360°를 totalCount로 나눈 각도로 발사.
@@ -282,8 +256,6 @@ public class GoldCoin : MonoBehaviour, IPoolable
         {
             _playerStats.AddGold(_goldValue);
         }
-        
-        // TODO: 획득 이펙트/사운드 추가 가능
         
         ReturnToPoolOrDestroy();
     }
