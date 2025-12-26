@@ -19,9 +19,9 @@ public class LoadingScene : MonoBehaviour
 
     private IEnumerator LoadScene_Coroutine()
     {
-        Debug.Log("[LoadingScene] 씬 로딩 시작: SampleScene");
+        Debug.Log("[LoadingScene] 씬 로딩 시작: NewScene");
         
-        AsyncOperation ao = SceneManager.LoadSceneAsync("SampleScene");
+        AsyncOperation ao = SceneManager.LoadSceneAsync("NewScene");
         
         if (ao == null)
         {

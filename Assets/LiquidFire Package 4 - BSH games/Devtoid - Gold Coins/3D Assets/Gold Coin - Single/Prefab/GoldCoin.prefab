@@ -79,7 +79,7 @@ MonoBehaviour:
   _dropUpForce: 5
   _dropSpreadForce: 3
   _dropSettleTime: 0.5
-  _initialSpeed: 2
+  _initialSpeed: 10
   _maxSpeed: 20
   _acceleration: 15
   _rotationSpeed: 180

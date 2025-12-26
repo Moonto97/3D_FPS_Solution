@@ -15,7 +15,7 @@ public class GoldCoin : MonoBehaviour, IPoolable
     private float _attractRadius = 5f;
     
     [SerializeField, Tooltip("플레이어와 충돌하여 획득되는 거리")]
-    private float _collectRadius = 0.5f;
+    private float _collectRadius = 1.0f;
     
     [SerializeField, Tooltip("획득 시 얻는 골드량")]
     private int _goldValue = 10;
@@ -214,9 +214,6 @@ public class GoldCoin : MonoBehaviour, IPoolable
         }
     }
     
-    /// <summary>
-    /// 코인 회전 애니메이션 (Y축 기준)
-    /// </summary>
     private void RotateCoin()
     {
         transform.Rotate(Vector3.up, _rotationSpeed * Time.deltaTime, Space.World);
@@ -231,20 +228,40 @@ public class GoldCoin : MonoBehaviour, IPoolable
         _currentSpeed = _initialSpeed;
     }
     
-    /// <summary>
-    /// 플레이어 방향으로 가속 이동.
+    /// 플레이어 방향으로 가속 이동. 근접 시 즉시 획득.
     /// </summary>
     private void MoveTowardsPlayer()
     {
-        // 가속
-        _currentSpeed += _acceleration * Time.deltaTime;
-        _currentSpeed = Mathf.Min(_currentSpeed, _maxSpeed);
+        // 플레이어 위치 (획득 판정과 동일한 기준점 사용)
+        Vector3 targetPos = _playerTransform.position;
+        float distanceToPlayer = Vector3.Distance(transform.position, targetPos);
         
-        // 플레이어 방향 (캐릭터 중심 약간 위)
-        Vector3 targetPos = _playerTransform.position + Vector3.up * 0.5f;
+        // 근접 시 즉시 획득 (빠른 속도로 지나치는 문제 방지)
+        if (distanceToPlayer <= _collectRadius * 1.5f)
+        {
+            Collect();
+            return;
+        }
+        
+        // 가속 (거리가 가까울수록 감속하여 지나치지 않도록)
+        float speedMultiplier = Mathf.Clamp01(distanceToPlayer / _attractRadius);
+        _currentSpeed += _acceleration * Time.deltaTime;
+        _currentSpeed = Mathf.Min(_currentSpeed, _maxSpeed * speedMultiplier + _initialSpeed);
+        
+        // 플레이어 방향으로 이동
         Vector3 direction = (targetPos - transform.position).normalized;
         
-        transform.position += direction * _currentSpeed * Time.deltaTime;
+        // 이동 거리가 남은 거리보다 크면 딱 그 위치로 (지나침 방지)
+        float moveDistance = _currentSpeed * Time.deltaTime;
+        if (moveDistance >= distanceToPlayer)
+        {
+            transform.position = targetPos;
+            Collect();
+        }
+        else
+        {
+            transform.position += direction * moveDistance;
+        }
     }
     
     /// <summary>
