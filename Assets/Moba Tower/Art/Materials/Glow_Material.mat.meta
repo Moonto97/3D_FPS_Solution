@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 41c9a2999b4376846a6bd5dd01f06856
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Materials/Glow_Material.mat
+  uploadId: 551013

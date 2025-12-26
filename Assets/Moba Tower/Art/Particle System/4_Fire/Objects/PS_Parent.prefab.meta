@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 89956e675b749204c8e10395ce2b5fb9
+timeCreated: 1517624801
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Particle System/4_Fire/Objects/PS_Parent.prefab
+  uploadId: 551013

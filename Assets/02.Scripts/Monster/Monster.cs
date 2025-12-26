@@ -84,17 +84,28 @@ public class Monster : MonoBehaviour, IDamageable
 
     #region 초기화
 
-    private void Awake()
+private void Awake()
     {
         // 컴포넌트 자동 획득 (Inspector 미설정 시)
         if (_animator == null) _animator = GetComponentInChildren<Animator>();
         if (_knockback == null) _knockback = GetComponent<MonsterKnockback>();
         if (_death == null) _death = GetComponent<MonsterDeath>();
         if (_jumpController == null) _jumpController = GetComponent<MonsterJumpController>();
+        
+        // Agent Type 자동 보정: NavMeshSurface가 Humanoid(0)로 Bake되어 있으면 일치시킴
+        // 프리팩이 커스텀 Agent Type을 사용하는 경우 맵 변경 시 불일치 발생 가능
+        const int HumanoidAgentTypeID = 0;
+        if (_agent != null && _agent.agentTypeID != HumanoidAgentTypeID)
+        {
+            _agent.agentTypeID = HumanoidAgentTypeID;
+        }
     }
     
-    private void Start()
+private void Start()
     {
+        // NavMesh 위로 자동 배치 (맵 변경 시 높이 불일치 방지)
+        WarpToNavMesh();
+        
         _defaultPosition = transform.position;
         _agent.speed = _monsterStats.MoveSpeed.Value;
         
@@ -154,6 +165,30 @@ public class Monster : MonoBehaviour, IDamageable
         if (!_agent.isOnNavMesh)
             Debug.LogError($"[Monster] {gameObject.name}이 NavMesh 위에 없습니다!", this);
     }
+
+/// <summary>
+    /// NavMesh 위로 자동 워프. 맵 변경 시 높이 불일치 문제 해결.
+    /// NavMeshAgent는 NavMesh 표면에서 일정 거리 이내에 있어야 활성화됨.
+    /// </summary>
+    private void WarpToNavMesh()
+    {
+        // 이미 NavMesh 위에 있으면 스킵
+        if (_agent.isOnNavMesh) return;
+        
+        // 현재 위치에서 가장 가까운 NavMesh 지점 찾기
+        const float searchRadius = 50f;
+        if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, searchRadius, NavMesh.AllAreas))
+        {
+            // Warp를 사용해 Agent를 NavMesh 위로 이동
+            _agent.Warp(hit.position);
+            Debug.Log($"[Monster] {gameObject.name} NavMesh 위로 워프: {hit.position}", this);
+        }
+        else
+        {
+            Debug.LogError($"[Monster] {gameObject.name} 주변 {searchRadius}m 내에 NavMesh가 없습니다!", this);
+        }
+    }
+
 
     private void OnDestroy()
     {
