@@ -27,6 +27,9 @@ public class PlayerBombFire : MonoBehaviour
     // UI 연동용: 외부에서 폭탄 개수 변화를 구독할 수 있는 이벤트
     public event Action<int, int> OnBombCountChanged;
     
+    // 카메라 캐싱 (Camera.main은 매번 태그 검색하므로 비효율)
+    private Camera _mainCamera;
+    
     // 외부에서 현재 폭탄 상태를 읽기 위한 프로퍼티
     public int CurrentBombCount => Mathf.FloorToInt(_bombCount.Value);
     public int MaxBombCount => Mathf.FloorToInt(_bombCount.MaxValue);
@@ -34,6 +37,7 @@ public class PlayerBombFire : MonoBehaviour
     
     private void Awake()
     {
+        _mainCamera = Camera.main;
         _bombCount.Initialize();
         _bombCount.OnValueChanged += HandleBombCountChanged;
     }
@@ -106,7 +110,7 @@ public class PlayerBombFire : MonoBehaviour
         Rigidbody rb = bombObj.GetComponent<Rigidbody>();
         if (rb != null)
         {
-            rb.AddForce(Camera.main.transform.forward * _throwPower, ForceMode.Impulse);
+            rb.AddForce(_mainCamera.transform.forward * _throwPower, ForceMode.Impulse);
         }
     }
     

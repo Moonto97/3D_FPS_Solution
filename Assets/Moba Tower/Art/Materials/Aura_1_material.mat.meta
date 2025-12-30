@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d99fc1d0c60878a4595e6945e6e04e9b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Materials/Aura_1_material.mat
+  uploadId: 551013

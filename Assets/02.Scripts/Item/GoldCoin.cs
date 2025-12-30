@@ -15,7 +15,7 @@ public class GoldCoin : MonoBehaviour, IPoolable
     private float _attractRadius = 5f;
     
     [SerializeField, Tooltip("플레이어와 충돌하여 획득되는 거리")]
-    private float _collectRadius = 0.5f;
+    private float _collectRadius = 1.0f;
     
     [SerializeField, Tooltip("획득 시 얻는 골드량")]
     private int _goldValue = 10;
@@ -102,16 +102,16 @@ public class GoldCoin : MonoBehaviour, IPoolable
             return;
         }
         
-        // 드랍 중일 때: 타이머 증가, 착지 대기
+        // 드랍 중일 때: 바닥 근처 감지로 착지 판정
         if (_isDropping)
         {
             _dropTimer += Time.deltaTime;
             
-            // 착지 감지: 타이머 + Rigidbody 속도 감소
-            bool hasSettled = _dropTimer >= _dropSettleTime && 
-                              _rb.linearVelocity.magnitude < 0.5f;
+            // 바닥 감지: 아래로 Raycast (0.5 유닛 이내에 뭔가 있으면 바닥 근처)
+            bool isNearGround = Physics.Raycast(transform.position, Vector3.down, 0.5f);
             
-            if (hasSettled)
+            // 착지 조건: 최소 시간 경과 + 바닥 근처
+            if (_dropTimer >= _dropSettleTime && isNearGround)
             {
                 CompleteDrop();
             }
@@ -145,9 +145,12 @@ public class GoldCoin : MonoBehaviour, IPoolable
     #region 드랍 효과
     
     /// <summary>
-    /// 몬스터가 드랍할 때 호출. 랜덤 방향으로 튀어오름.
+    /// 소닉 스타일 방사형 드랍. 360°를 totalCount로 나눈 각도로 발사.
+    /// 여러 코인이 폭발하듯 균등하게 퍼지는 효과.
     /// </summary>
-    public void LaunchDrop()
+    /// <param name="index">현재 코인 인덱스 (0 ~ totalCount-1)</param>
+    /// <param name="totalCount">전체 코인 개수</param>
+    public void LaunchRadial(int index, int totalCount)
     {
         _isDropping = true;
         _isAttracted = false;
@@ -157,15 +160,21 @@ public class GoldCoin : MonoBehaviour, IPoolable
         _rb.isKinematic = false;
         _rb.useGravity = true;
         
-        // 랜덤 방향으로 힘 적용 (위 + 수평 산개)
-        Vector2 randomCircle = Random.insideUnitCircle;
-        Vector3 spreadDir = new Vector3(randomCircle.x, 0f, randomCircle.y).normalized;
+        // 균등 각도 계산: 360° / 총 개수 = 각 코인 간격
+        float angleStep = 360f / totalCount;
+        float angle = angleStep * index;
+        float angleRad = angle * Mathf.Deg2Rad;
+        
+        // 방향 벡터 (XZ 평면에서 원형 배치)
+        Vector3 spreadDir = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad));
+        
+        // 힘: 위로 + 수평 산개 (포물선 궤적)
         Vector3 launchForce = Vector3.up * _dropUpForce + spreadDir * _dropSpreadForce;
         
-        _rb.linearVelocity = Vector3.zero;  // 기존 속도 초기화
+        _rb.linearVelocity = Vector3.zero;
         _rb.AddForce(launchForce, ForceMode.Impulse);
         
-        // 회전도 약간 추가 (시각적 재미)
+        // 약간의 랜덤 회전 (시각적 재미)
         _rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
     }
     
@@ -205,9 +214,6 @@ public class GoldCoin : MonoBehaviour, IPoolable
         }
     }
     
-    /// <summary>
-    /// 코인 회전 애니메이션 (Y축 기준)
-    /// </summary>
     private void RotateCoin()
     {
         transform.Rotate(Vector3.up, _rotationSpeed * Time.deltaTime, Space.World);
@@ -222,20 +228,40 @@ public class GoldCoin : MonoBehaviour, IPoolable
         _currentSpeed = _initialSpeed;
     }
     
-    /// <summary>
-    /// 플레이어 방향으로 가속 이동.
+    /// 플레이어 방향으로 가속 이동. 근접 시 즉시 획득.
     /// </summary>
     private void MoveTowardsPlayer()
     {
-        // 가속
-        _currentSpeed += _acceleration * Time.deltaTime;
-        _currentSpeed = Mathf.Min(_currentSpeed, _maxSpeed);
+        // 플레이어 위치 (획득 판정과 동일한 기준점 사용)
+        Vector3 targetPos = _playerTransform.position;
+        float distanceToPlayer = Vector3.Distance(transform.position, targetPos);
         
-        // 플레이어 방향 (캐릭터 중심 약간 위)
-        Vector3 targetPos = _playerTransform.position + Vector3.up * 0.5f;
+        // 근접 시 즉시 획득 (빠른 속도로 지나치는 문제 방지)
+        if (distanceToPlayer <= _collectRadius * 1.5f)
+        {
+            Collect();
+            return;
+        }
+        
+        // 가속 (거리가 가까울수록 감속하여 지나치지 않도록)
+        float speedMultiplier = Mathf.Clamp01(distanceToPlayer / _attractRadius);
+        _currentSpeed += _acceleration * Time.deltaTime;
+        _currentSpeed = Mathf.Min(_currentSpeed, _maxSpeed * speedMultiplier + _initialSpeed);
+        
+        // 플레이어 방향으로 이동
         Vector3 direction = (targetPos - transform.position).normalized;
         
-        transform.position += direction * _currentSpeed * Time.deltaTime;
+        // 이동 거리가 남은 거리보다 크면 딱 그 위치로 (지나침 방지)
+        float moveDistance = _currentSpeed * Time.deltaTime;
+        if (moveDistance >= distanceToPlayer)
+        {
+            transform.position = targetPos;
+            Collect();
+        }
+        else
+        {
+            transform.position += direction * moveDistance;
+        }
     }
     
     /// <summary>
@@ -246,10 +272,7 @@ public class GoldCoin : MonoBehaviour, IPoolable
         if (_playerStats != null)
         {
             _playerStats.AddGold(_goldValue);
-            Debug.Log($"[GoldCoin] 골드 획득! +{_goldValue} (총: {_playerStats.Gold})");
         }
-        
-        // TODO: 획득 이펙트/사운드 추가 가능
         
         ReturnToPoolOrDestroy();
     }

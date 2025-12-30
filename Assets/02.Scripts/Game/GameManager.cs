@@ -14,7 +14,8 @@ public class GameManager : MonoBehaviour
     [Header("UI 참조")]
     [SerializeField] private TextMeshProUGUI _stateTextUI;
     [SerializeField] private CursorManager _cursorManager;
-
+    [SerializeField] private UI_OptionPopup _optionPopup;
+    
     [Header("타이밍")]
     [SerializeField] private float _showReadyUI = 2f;
     [SerializeField] private float _showStartUI = 0.5f;
@@ -44,7 +45,19 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             ToggleUIMode();
+            _optionPopup.Show();
+            Time.timeScale = 0f;
         }
+        
+    }
+
+    public void Quit()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit(); // 어플리케이션 종료
+#endif
     }
 
     private void ValidateReferences()

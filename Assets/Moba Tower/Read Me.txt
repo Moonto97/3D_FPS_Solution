@@ -1,0 +1,10 @@
+Thanks for purchasing the asset. you are awesome. please rate the asset in assetstore.
+
+incase any complaints please contact us @ aadhithyan.ka@gmail.com
+
+just drag and drop the prefab and your are good to go.
+
+tested in Unity Render Pipeline Unity version 2021.3.9f1
+***********************For HDRP***************************
+tested in HDRP.  When using HDRP goto--- Edit/ Rendering/ Material/ click  Convert all builtin materials to HDRP
+***********************************************************

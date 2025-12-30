@@ -46,6 +46,13 @@ public class PlayerGunFire : MonoBehaviour
     private const float DEFAULT_RELOAD_TIME = 1.6f;
     private const float DEFAULT_FIRE_RATE = 0.1f;
     private const int BURST_COUNT = 3;  // 3점사
+    
+    // 기본 탄퍼짐 설정 (GunData 없을 때)
+    private const float DEFAULT_BASE_SPREAD = 0.5f;
+    private const float DEFAULT_MAX_SPREAD = 5f;
+    private const float DEFAULT_SPREAD_INCREMENT = 0.3f;
+    private const float DEFAULT_SPREAD_RECOVERY = 8f;
+
 
     #endregion
 
@@ -65,7 +72,14 @@ public class PlayerGunFire : MonoBehaviour
     // 풀 상태
     private bool _isPoolInitialized;
     
+    // 카메라 캐싱 (Camera.main은 매번 태그 검색하므로 비효율)
+    private Camera _mainCamera;
+    
     private EZoomMode _zoomMode = EZoomMode.Normal;
+
+    // 탄퍼짐 상태
+    private float _currentSpread;  // 현재 탄퍼짐 각도
+
 
     #endregion
 
@@ -83,6 +97,10 @@ public class PlayerGunFire : MonoBehaviour
     /// <summary>발사 모드 변경 시</summary>
     public event Action<EFireMode> OnFireModeChanged;
 
+    /// <summary>발사 시 호출 (탄퍼짐 전달 - 크로스헤어 애니메이션용)</summary>
+    public event Action<float> OnFired;
+
+
     #endregion
 
     #region ========== Properties (외부 읽기용) ==========
@@ -98,6 +116,7 @@ public class PlayerGunFire : MonoBehaviour
 
     private void Start()
     {
+        _mainCamera = Camera.main;
         InitializeHitEffectPool();
         InitializeRecoil();
         InitializeAmmo();
@@ -192,6 +211,8 @@ public class PlayerGunFire : MonoBehaviour
         HandleFireModeInput();
         HandleFireInput();
         HandleReloadInput();
+        RecoverSpread();  // 탄퍼짐 자연 회복
+
     }
 
     /// <summary>
@@ -321,8 +342,14 @@ private void Fire()
         // 반동
         ApplyRecoil();
 
-        // 레이캐스트 (카메라 중앙 → 전방)
-        Ray ray = new Ray(_fireTransform.position, Camera.main.transform.forward);
+        // 탄퍼짐 증가 + 이벤트 발생 (크로스헤어 애니메이션)
+        IncreaseSpread();
+        OnFired?.Invoke(_currentSpread);
+
+
+        // 탄퍼짐 적용: 기본 방향에 랜덤 각도 추가
+        Vector3 spreadDirection = ApplySpread(_mainCamera.transform.forward);
+        Ray ray = new Ray(_fireTransform.position, spreadDirection);
         if (Physics.Raycast(ray, out RaycastHit hitInfo))
         {
             PlayHitEffect(hitInfo.point, hitInfo.normal);
@@ -369,13 +396,20 @@ private IEnumerator BurstFireCoroutine()
 
     /// <summary>
     /// 피격 대상에게 데미지 전달
+    /// IDamageable 인터페이스로 모든 피격 가능 대상 처리 (Monster, Barrel 등)
     /// </summary>
     private void ProcessDamage(RaycastHit hitInfo)
     {
-        Monster monster = hitInfo.collider.GetComponent<Monster>();
-        if (monster != null)
+        // IDamageable 구현체면 데미지 적용 (Monster, Player, Barrel 등)
+        if (hitInfo.collider.TryGetComponent(out IDamageable damageable))
         {
-            monster.TryTakeDamage(_damage);
+            Damage damage = new Damage
+            {
+                Value = _damage,
+                HitPoint = hitInfo.point,
+                Who = gameObject
+            };
+            damageable.TryTakeDamage(damage);
         }
     }
 
@@ -455,7 +489,54 @@ private void TryReload()
 
     #endregion
 
-    #region ========== Effects ==========
+        #region ========== Spread System ==========
+
+    /// <summary>
+    /// 방향 벡터에 탄퍼짐 적용
+    /// 원리: 원본 방향을 랜덤 각도로 회전하여 분산 효과 구현
+    /// </summary>
+    private Vector3 ApplySpread(Vector3 baseDirection)
+    {
+        float baseSpread = _gunData != null ? _gunData.BaseSpread : DEFAULT_BASE_SPREAD;
+        
+        // 현재 탄퍼짐 각도 (기본 + 누적)
+        float totalSpread = baseSpread + _currentSpread;
+        
+        // 랜덤 편차 각도 생성 (X/Y 평면에서)
+        float spreadX = UnityEngine.Random.Range(-totalSpread, totalSpread);
+        float spreadY = UnityEngine.Random.Range(-totalSpread, totalSpread);
+        
+        // 기본 방향을 기준으로 X/Y 회전 적용
+        Quaternion spreadRotation = Quaternion.Euler(spreadY, spreadX, 0f);
+        return spreadRotation * baseDirection;
+    }
+
+    /// <summary>
+    /// 발사 시 탄퍼짐 증가
+    /// </summary>
+    private void IncreaseSpread()
+    {
+        float increment = _gunData != null ? _gunData.SpreadIncrement : DEFAULT_SPREAD_INCREMENT;
+        float maxSpread = _gunData != null ? _gunData.MaxSpread : DEFAULT_MAX_SPREAD;
+        
+        _currentSpread = Mathf.Min(_currentSpread + increment, maxSpread);
+    }
+
+    /// <summary>
+    /// 매 프레임 탄퍼짐 자연 회복
+    /// </summary>
+    private void RecoverSpread()
+    {
+        if (_currentSpread <= 0f) return;
+        
+        float recovery = _gunData != null ? _gunData.SpreadRecovery : DEFAULT_SPREAD_RECOVERY;
+        _currentSpread = Mathf.Max(0f, _currentSpread - recovery * Time.deltaTime);
+    }
+
+    #endregion
+
+    
+#region ========== Effects ==========
 
     /// <summary>
     /// 반동 적용 (CameraRecoil에 위임)

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: af3518db3646b4a4189bc4a2ae125a61
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8574412962073106934
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Textures/Terrain Layer.terrainlayer
+  uploadId: 551013

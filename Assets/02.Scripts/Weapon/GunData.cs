@@ -26,6 +26,20 @@ public class GunData : ScriptableObject
     [Tooltip("발사 간격 (초). 낮을수록 연사 속도 빠름")]
     [SerializeField] private float _fireRate = 0.1f;
 
+    [Header("탄퍼짐 설정")]
+    [Tooltip("기본 탄퍼짐 각도 (도)")]
+    [SerializeField] private float _baseSpread = 0.5f;
+    
+    [Tooltip("최대 탄퍼짐 각도 (도)")]
+    [SerializeField] private float _maxSpread = 5f;
+    
+    [Tooltip("발사당 탄퍼짐 증가량 (도)")]
+    [SerializeField] private float _spreadIncrement = 0.3f;
+    
+    [Tooltip("초당 탄퍼짐 회복량 (도)")]
+    [SerializeField] private float _spreadRecovery = 8f;
+
+
     // === 읽기 전용 프로퍼티 ===
     // 외부에서는 데이터를 읽기만 가능, 수정 불가 (데이터 무결성)
     public int MagazineSize => _magazineSize;
@@ -33,4 +47,9 @@ public class GunData : ScriptableObject
     public int MaxReserveAmmo => _maxReserveAmmo;
     public float ReloadTime => _reloadTime;
     public float FireRate => _fireRate;
+    public float BaseSpread => _baseSpread;
+    public float MaxSpread => _maxSpread;
+    public float SpreadIncrement => _spreadIncrement;
+    public float SpreadRecovery => _spreadRecovery;
+
 }

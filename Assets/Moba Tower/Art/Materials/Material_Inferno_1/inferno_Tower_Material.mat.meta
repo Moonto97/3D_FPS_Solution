@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ce91af34992496840a2bce9bba93ead4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Materials/Material_Inferno_1/inferno_Tower_Material.mat
+  uploadId: 551013

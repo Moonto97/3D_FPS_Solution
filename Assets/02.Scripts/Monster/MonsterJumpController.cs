@@ -11,7 +11,10 @@ public class MonsterJumpController : MonoBehaviour
 {
     #region 이벤트 (Monster.cs와 통신용)
     
-    /// <summary>점프 시작 시 발생. Monster가 상태를 Jump로 전환해야 함.</summary>
+    /// <summary>점프 준비 시작 시 발생. Monster가 애니메이션을 시작해야 함.</summary>
+    public event Action<float> OnJumpPrepare;
+    
+    /// <summary>물리 점프 시작 시 발생. Monster가 상태를 Jump로 전환해야 함.</summary>
     public event Action OnJumpStarted;
     
     /// <summary>점프 완료 시 발생. Monster가 상태를 Trace로 전환해야 함.</summary>
@@ -60,7 +63,15 @@ public class MonsterJumpController : MonoBehaviour
     private Vector3 _lastPosition;
     private float _stuckTimer;
     
+    /// <summary>점프 준비 중 (애니메이션 재생 중, 아직 발이 안 떠남)</summary>
+    private bool _isPreparing;
+    
+    /// <summary>물리 점프 진행 중 (발이 땅에서 떠남)</summary>
     public bool IsJumping { get; private set; }
+    
+    /// <summary>점프 준비 중 여부. 피격 시 취소 판정에 사용.</summary>
+    public bool IsPreparing => _isPreparing;
+    
     public bool IsInitialized => _playerTransform != null;
     
     #endregion
@@ -124,15 +135,18 @@ public class MonsterJumpController : MonoBehaviour
     
     /// <summary>
     /// 점프를 강제 취소한다. 피격 시 호출.
+    /// 준비 중이거나 점프 중일 때만 취소 가능.
     /// 현재 수직 속도를 반환하여 넉백에 사용.
     /// </summary>
     public float CancelJump()
     {
-        if (!IsJumping) return 0f;
+        // 준비 중도 아니고 점프 중도 아니면 취소할 게 없음
+        if (!IsJumping && !_isPreparing) return 0f;
         
         float currentVerticalVelocity = _jumpVelocity.y;
         
-        // 점프 상태만 정리 (Agent는 Monster가 관리)
+        // 모든 점프 관련 상태 정리
+        _isPreparing = false;
         IsJumping = false;
         _jumpVelocity = Vector3.zero;
         
@@ -146,6 +160,29 @@ public void ResetStuckDetection()
     {
         _stuckTimer = 0f;
         _lastPosition = transform.position;
+    }
+    
+    /// <summary>
+    /// 물리 점프를 실행한다. Animation Event에서 호출.
+    /// 준비 상태가 아니면 무시.
+    /// </summary>
+    public void StartPhysicalJump()
+    {
+        if (!_isPreparing)
+        {
+            Debug.LogWarning("[JumpController] StartPhysicalJump 호출됨 - 준비 상태 아님");
+            return;
+        }
+        
+        // 준비 → 점프 상태 전환
+        _isPreparing = false;
+        IsJumping = true;
+        
+        // NavMesh 위치 업데이트 비활성화 (물리 이동 시작)
+        _agent.updatePosition = false;
+        
+        OnJumpStarted?.Invoke();
+        Debug.Log("[JumpController] 물리 점프 시작 (Animation Event)");
     }
     
     #endregion
@@ -404,6 +441,31 @@ public void ResetStuckDetection()
         return totalAirTime * JumpHorizontalSpeed * 0.7f;
     }
     
+    /// <summary>
+    /// 점프 체공 시간을 계산한다.
+    /// 상승 점프: 올라갔다 내려오는 시간
+    /// 하강 점프: 올라갔다 더 내려가는 시간
+    /// </summary>
+    private float CalculateAirTime(float heightDiff)
+    {
+        float riseTime = JumpForce / GRAVITY;
+        
+        if (heightDiff >= 0)
+        {
+            // 상승 점프: 정점까지 올라갔다가 heightDiff만큼만 내려옴
+            float fallHeight = CalculateMaxJumpHeight() - heightDiff;
+            float fallTime = Mathf.Sqrt(2f * Mathf.Max(0, fallHeight) / GRAVITY);
+            return riseTime + fallTime;
+        }
+        else
+        {
+            // 하강 점프: 정점까지 올라갔다가 시작점 + 추가 높이만큼 내려옴
+            float totalFallHeight = CalculateMaxJumpHeight() + Mathf.Abs(heightDiff);
+            float fallTime = Mathf.Sqrt(2f * totalFallHeight / GRAVITY);
+            return riseTime + fallTime;
+        }
+    }
+    
     #endregion
 
     #region 점프 실행 로직
@@ -459,16 +521,20 @@ public void ResetStuckDetection()
         _jumpVelocity = horizontalDir * JumpHorizontalSpeed + Vector3.up * JumpForce;
         _jumpCooldownTimer = JUMP_COOLDOWN;
 
+        // NavMesh 이동 정지 (위치 업데이트는 StartPhysicalJump에서)
         _agent.isStopped = true;
-        _agent.updatePosition = false;
 
-        IsJumping = true;
-        OnJumpStarted?.Invoke();
+        // 체공 시간 계산 (애니메이션 속도 조정용)
+        float airTime = CalculateAirTime(heightDiff);
+        
+        // 준비 상태로 전환 (물리 점프는 Animation Event가 트리거)
+        _isPreparing = true;
+        OnJumpPrepare?.Invoke(airTime);
 
         string jumpType = isJumpingUp ? "상승" : "하강";
         Vector3 toTarget = landingPos - transform.position;
         toTarget.y = 0;
-        Debug.Log($"[JumpController] {jumpType} 점프 시작 - 높이:{heightDiff:F2}m, 거리:{toTarget.magnitude:F2}m");
+        Debug.Log($"[JumpController] {jumpType} 점프 준비 시작 - 높이:{heightDiff:F2}m, 거리:{toTarget.magnitude:F2}m, 체공:{airTime:F2}초");
     }
 
     private bool TryFindLandingPosition(out Vector3 landingPos)

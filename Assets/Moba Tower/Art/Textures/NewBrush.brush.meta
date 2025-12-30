@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 96e9eaed93e60b249bb414626a48f387
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Textures/NewBrush.brush
+  uploadId: 551013

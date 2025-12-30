@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 47b11c4ca5ad0a64b8a8f8c0900e44c1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Materials/Material_Inferno_glow/inferno_Tower_Material_glow.mat
+  uploadId: 551013

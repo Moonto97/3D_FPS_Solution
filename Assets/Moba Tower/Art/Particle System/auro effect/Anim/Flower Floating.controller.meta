@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f7114b5d26800dd49ac7866e719a063a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Art/Particle System/auro effect/Anim/Flower Floating.controller
+  uploadId: 551013

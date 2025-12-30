@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 67677e6dfc68c7740bc21cbd97ec8690
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 241796
+  packageName: Moba Tower
+  packageVersion: 1.0
+  assetPath: Assets/Moba Tower/Prefabs/inferno_Tower_No_Glow.prefab
+  uploadId: 551013

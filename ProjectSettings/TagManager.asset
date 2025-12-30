@@ -7,6 +7,9 @@ TagManager:
   - FxTemporaire
   - BulletVFX
   - Bomb
+  - SecondCamera
+  - BulletSpawn
+  - ground
   layers:
   - Default
   - TransparentFX
@@ -18,14 +21,14 @@ TagManager:
   - Barrel
   - Monster
   - MinimapOnly
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - GoldCoin
+  - Suimono_Water
+  - Suimono_Depth
+  - Suimono_Screen
+  - Ground
+  - Lights
+  - Buildings
+  - SmallProps
   - 
   - 
   - 
